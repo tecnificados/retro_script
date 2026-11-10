@@ -65,6 +65,12 @@ function Expand-Once([string]$Archive, [string]$Destination, [string]$Marker='.r
     New-Item -ItemType File -Path (Join-Path $Destination $Marker) -Force | Out-Null
 }
 
+function Get-RelativePath([string]$BaseDirectory, [string]$TargetPath) {
+    $baseUri = New-Object System.Uri(($BaseDirectory.TrimEnd('\') + '\'))
+    $targetUri = New-Object System.Uri($TargetPath)
+    return [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($targetUri).ToString()).Replace('/', '\')
+}
+
 try {
     Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -97,24 +103,33 @@ try {
     $romDir = Join-Path $esdeExe.DirectoryName 'ROMs\windows'
     New-Item -ItemType Directory -Path $romDir -Force | Out-Null
     $launcher = Join-Path $romDir 'Break Machine.bat'
-    $rootPrefix = $Root.TrimEnd('\') + '\'
-    $dosboxRelative = '..\..\' + $dosboxExe.FullName.Substring($rootPrefix.Length).Replace('/', '\')
-    $gameRelative = '..\..\' + $gameProgram.DirectoryName.Substring($rootPrefix.Length).Replace('/', '\')
+    $dosboxRelative = Get-RelativePath $romDir $dosboxExe.FullName
+    $gameRelative = Get-RelativePath $romDir $gameProgram.DirectoryName
     @(
         '@echo off',
         'setlocal',
+        'set "LOG=%~dp0Break Machine launch.log"',
+        'echo [%date% %time%] Starting Break Machine > "%LOG%"',
         ('set "DOSBOX=%~dp0{0}"' -f $dosboxRelative),
         ('set "GAMEDIR=%~dp0{0}"' -f $gameRelative),
+        'if not exist "%DOSBOX%" (echo ERROR: DOSBox not found: "%DOSBOX%" >> "%LOG%" & exit /b 10)',
+        ('if not exist "%GAMEDIR%\{0}" (echo ERROR: Game executable not found in "%GAMEDIR%" >> "%LOG%" & exit /b 11)' -f $gameProgram.Name),
+        'echo DOSBox: "%DOSBOX%" >> "%LOG%"',
+        'echo Game folder: "%GAMEDIR%" >> "%LOG%"',
         'pushd "%GAMEDIR%"',
-        ('"%DOSBOX%" -noconsole -exit -c "mount c ." -c "c:" -c "{0}"' -f $gameProgram.Name),
-        'popd'
+        ('"%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "{0}" >> "%LOG%" 2>&1' -f $gameProgram.Name),
+        'set "DOSBOX_EXIT=%ERRORLEVEL%"',
+        'popd',
+        'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
+        'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $launcher -Encoding ASCII
 
-    $shortcut = Join-Path $Root 'Jugar Break Machine.bat'
-    @('@echo off', ('start "" "{0}"' -f $esdeExe.FullName)) | Set-Content -LiteralPath $shortcut -Encoding ASCII
+    $shortcut = Join-Path $Root 'run.bat'
+    @('@echo off', ('start "" "{0}" --debug' -f $esdeExe.FullName)) | Set-Content -LiteralPath $shortcut -Encoding ASCII
     Write-Log 'Configuración terminada. ES-DE mostrará Break Machine en el sistema Windows.'
-    Write-Log "Inicia el juego desde: $shortcut"
-    Write-Host "`nListo. Ejecuta 'Jugar Break Machine.bat' o abre ES-DE desde $($esdeExe.FullName)."
+    Write-Log "Inicia ES-DE en modo de depuración desde: $shortcut"
+    Write-Log "Registro detallado de ES-DE: $(Join-Path $esdeExe.DirectoryName 'logs\es_log.txt')"
+    Write-Host "`nListo. Ejecuta 'run.bat' o abre ES-DE desde $($esdeExe.FullName)."
     Write-Host "Registro: $Log`nCaché reutilizable: $Cache"
 }
 catch {
