@@ -9,12 +9,15 @@ Lee primero `README.md`, `docs/estado-del-proyecto.md` y `docs/flujo-setup.md`. 
 - `Executable` puede ser un nombre o una ruta relativa dentro del ZIP. Si el nombre aparece más de una vez, indicar la ruta; no se permiten rutas absolutas ni `..`. El lanzador monta la raíz extraída del juego, conservando el acceso a sus subcarpetas y archivos auxiliares.
 - El flujo genérico espera un ejecutable DOS que se inicie directamente. No ejecuta automáticamente instaladores ni configura argumentos o pasos iniciales.
 - El año se guarda en los metadatos locales de ES-DE. El proveedor de scraping es el que el usuario configure en ES-DE; no asumir que MobyGames está disponible.
+- `metadata_sources.csv` contiene el nombre exacto del `.bat`, la página de metadatos y una URL directa de imagen opcional. El setup descarga las imágenes antes de copiarlas, conserva los originales en `.setup-cache\metadata-images`, convierte GIF a PNG y monta los resultados en `.setup-cache\metadata-staging` antes de copiarlos a ES-DE. Si una fuente no responde, el setup continúa con título/año locales.
+- El usuario confirmó que la descarga y visualización de las imágenes ya funciona. Si vuelve a fallar, revisar `setup.log` y el contenido de `.setup-cache\metadata-images` y `.setup-cache\metadata-staging`.
 - Tet42 está en el CSV con la URL proporcionada de Archive.org, ejecutable `TET.EXE` y año 1989. El setup se intentó el 11-11-2026, pero falló al resolver `archive.org`; el ZIP aún no está en caché ni instalado. Conservar la URL y reintentar con DNS/red funcionales.
 - Beneath a Steel Sky fue retirado por petición del usuario. No reintroducirlo ni añadir montaje de imágenes de CD para ese caso.
 - Extreme Pinball usa `Games\ExtremePinball\dosbox-video.conf` para estirar la imagen a la pantalla; esto puede deformar las proporciones.
 - Break Machine usa el ZIP de Internet Archive y la caché `break-machine-freeware-v14-archive-org.zip`.
 - `clean.bat` conserva scripts, documentación, licencia y CSV; borra la instalación y caché tras pedir confirmación.
 - El usuario realiza los commits. No hacer commits ni push.
+- Si falla la descarga, extracción o detección de un juego, el setup debe registrar un aviso, omitir su lanzador y su entrada de ES-DE, y continuar con los demás juegos. ES-DE y DOSBox son requisitos; no aplicar esta tolerancia a sus descargas base.
 
 ## Próximos pasos
 

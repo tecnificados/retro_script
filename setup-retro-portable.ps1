@@ -60,6 +60,32 @@ function Get-Archive([string]$Name, [string]$Url, [string]$File) {
     return $path
 }
 
+function Get-OptionalGameArchive($Download) {
+    try { return (Get-Archive $Download.Name $Download.Url $Download.Archive) }
+    catch {
+        Write-Log "Se omite '$($Download.Name)' porque no se pudo descargar: $($_.Exception.Message)" 'WARN'
+        return $null
+    }
+}
+
+function Expand-OptionalGame([string]$Archive, [string]$Destination, [string]$Marker, [string]$GameName) {
+    if (-not $Archive) { return $false }
+    try { Expand-Once $Archive $Destination $Marker; return $true }
+    catch {
+        Write-Log "Se omite '$GameName' porque no se pudo extraer: $($_.Exception.Message)" 'WARN'
+        return $false
+    }
+}
+
+function Find-GameFile([string]$Directory, [string[]]$Names) {
+    if (-not (Test-Path -LiteralPath $Directory -PathType Container)) { return $null }
+    foreach ($name in $Names) {
+        $file = Get-ChildItem -LiteralPath $Directory -Filter $name -File -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($file) { return $file }
+    }
+    return $null
+}
+
 function Expand-Once([string]$Archive, [string]$Destination, [string]$Marker='.ready') {
     if (Test-Path -LiteralPath (Join-Path $Destination $Marker)) { return }
     $staging = "$Destination.incomplete"
@@ -83,6 +109,37 @@ function ConvertTo-SafeSlug([string]$Value) {
     return $slug
 }
 
+function Get-HtmlMetaValue([string]$Html, [string[]]$Names) {
+    foreach ($tag in [regex]::Matches($Html, '(?is)<meta\b[^>]*>')) {
+        $tagText = $tag.Value
+        $nameMatch = [regex]::Match($tagText, '(?is)(?:name|property)\s*=\s*["'']([^"'']+)["'']')
+        if (-not $nameMatch.Success -or $Names -notcontains $nameMatch.Groups[1].Value.ToLowerInvariant()) { continue }
+        $contentMatch = [regex]::Match($tagText, '(?is)content\s*=\s*["''](.*?)["'']')
+        if ($contentMatch.Success) { return [System.Net.WebUtility]::HtmlDecode($contentMatch.Groups[1].Value).Trim() }
+    }
+    return $null
+}
+
+function Get-GamePageData([string]$Url) {
+    $response = Invoke-WebRequest -Uri $Url -MaximumRedirection 10 -UseBasicParsing
+    $html = [string]$response.Content
+    $description = Get-HtmlMetaValue $html @('og:description', 'description', 'twitter:description')
+    $image = Get-HtmlMetaValue $html @('og:image', 'twitter:image')
+    if ($image) {
+        $image = ([System.Uri]::new([System.Uri]$Url, $image)).AbsoluteUri
+    }
+    return [pscustomobject]@{ Description=$description; ImageUrl=$image }
+}
+
+function Get-ImageFormat([string]$Path) {
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xD8 -and $bytes[2] -eq 0xFF) { return '.jpg' }
+    if ($bytes.Length -ge 8 -and $bytes[0] -eq 0x89 -and $bytes[1] -eq 0x50 -and $bytes[2] -eq 0x4E -and $bytes[3] -eq 0x47) { return '.png' }
+    if ($bytes.Length -ge 12 -and [System.Text.Encoding]::ASCII.GetString($bytes, 0, 4) -eq 'RIFF' -and [System.Text.Encoding]::ASCII.GetString($bytes, 8, 4) -eq 'WEBP') { return '.webp' }
+    if ($bytes.Length -ge 6 -and [System.Text.Encoding]::ASCII.GetString($bytes, 0, 3) -eq 'GIF') { return '.gif' }
+    return $null
+}
+
 try {
     Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -103,27 +160,35 @@ try {
     }
     $esdeZip = Get-Archive $Downloads[0].Name $Downloads[0].Url $Downloads[0].Archive
     $dosboxZip = Get-Archive $Downloads[1].Name $Downloads[1].Url $Downloads[1].Archive
-    $gameZip = Get-Archive $Downloads[2].Name $Downloads[2].Url $Downloads[2].Archive
-    $pinballZip = Get-Archive $Downloads[3].Name $Downloads[3].Url $Downloads[3].Archive
-    $doomZip = Get-Archive $Downloads[4].Name $Downloads[4].Url $Downloads[4].Archive
-    $popZip = Get-Archive $Downloads[5].Name $Downloads[5].Url $Downloads[5].Archive
-    $hexxZip = Get-Archive $Downloads[6].Name $Downloads[6].Url $Downloads[6].Archive
-    $omfZip = Get-Archive $Downloads[7].Name $Downloads[7].Url $Downloads[7].Archive
     $oldJazzCache = Join-Path $Cache 'extra-jazz-jackrabbit.zip'
     $newJazzCache = Join-Path $Cache $Downloads[8].Archive
     if (-not (Test-Path -LiteralPath $newJazzCache) -and (Test-Path -LiteralPath $oldJazzCache)) {
         Move-Item -LiteralPath $oldJazzCache -Destination $newJazzCache
         Write-Log 'Caché anterior de Jazz Jackrabbit renombrada para reflejar que ahora es un juego de la lista fija.'
     }
-    $jazzZip = Get-Archive $Downloads[8].Name $Downloads[8].Url $Downloads[8].Archive
+    $optionalGameZips = @{}
+    for ($downloadIndex = 2; $downloadIndex -lt $Downloads.Count; $downloadIndex++) {
+        $download = $Downloads[$downloadIndex]
+        $optionalGameZips[$download.Archive] = Get-OptionalGameArchive $download
+    }
+    $gameZip = $optionalGameZips[$Downloads[2].Archive]
+    $pinballZip = $optionalGameZips[$Downloads[3].Archive]
+    $doomZip = $optionalGameZips[$Downloads[4].Archive]
+    $popZip = $optionalGameZips[$Downloads[5].Archive]
+    $hexxZip = $optionalGameZips[$Downloads[6].Archive]
+    $omfZip = $optionalGameZips[$Downloads[7].Archive]
+    $jazzZip = $optionalGameZips[$Downloads[8].Archive]
     $extraGamePackages = @()
     foreach ($extraGame in $extraGames) {
-        $extraSlug = ConvertTo-SafeSlug $extraGame.Title
-        $extraArchiveName = "extra-$extraSlug.zip"
-        $extraArchive = Get-Archive "Juego adicional: $($extraGame.Title)" $extraGame.DownloadUrl $extraArchiveName
-        $extraGameDir = Join-Path $Root "Games\Extras\$extraSlug"
-        Expand-Once $extraArchive $extraGameDir '.ready-extra'
-        $extraGamePackages += [pscustomobject]@{ Title=$extraGame.Title.Trim(); Slug=$extraSlug; Executable=$extraGame.Executable.Trim(); Year=([string]$extraGame.Year).Trim(); Directory=$extraGameDir }
+        try {
+            $extraSlug = ConvertTo-SafeSlug $extraGame.Title
+            $extraArchiveName = "extra-$extraSlug.zip"
+            $extraArchive = Get-Archive "Juego adicional: $($extraGame.Title)" $extraGame.DownloadUrl $extraArchiveName
+            $extraGameDir = Join-Path $Root "Games\Extras\$extraSlug"
+            if (-not (Expand-OptionalGame $extraArchive $extraGameDir '.ready-extra' $extraGame.Title)) { continue }
+            $extraGamePackages += [pscustomobject]@{ Title=$extraGame.Title.Trim(); Slug=$extraSlug; Executable=$extraGame.Executable.Trim(); Year=([string]$extraGame.Year).Trim(); Directory=$extraGameDir }
+        }
+        catch { Write-Log "Se omite el juego extra '$($extraGame.Title)': $($_.Exception.Message)" 'WARN' }
     }
 
     $esdeDir = Join-Path $Root 'ES-DE'
@@ -131,84 +196,77 @@ try {
     $dosboxDir = Join-Path $Root 'Emulators\dosbox-staging'
     Expand-Once $dosboxZip $dosboxDir
     $gameDir = Join-Path $Root 'Games\BreakMachine'
-    Expand-Once $gameZip $gameDir '.ready-freeware-v14'
+    $null = Expand-OptionalGame $gameZip $gameDir '.ready-freeware-v14' 'Break Machine'
     $pinballDir = Join-Path $Root 'Games\ExtremePinball'
-    Expand-Once $pinballZip $pinballDir '.ready-demo-v1'
-    $pinballVideoConfig = Join-Path $pinballDir 'dosbox-video.conf'
-    @('[render]', 'aspect = stretch', 'viewport = fit', 'integer_scaling = off') | Set-Content -LiteralPath $pinballVideoConfig -Encoding ASCII
-    Write-Log 'Perfil de Extreme Pinball configurado para estirar la imagen a pantalla completa.'
-    $doomDir = Join-Path $Root 'Games\DoomShareware'
-    Expand-Once $doomZip $doomDir '.ready-shareware-v1'
-    $popDir = Join-Path $Root 'Games\PrinceOfPersiaDemo'
-    Expand-Once $popZip $popDir '.ready-playable-demo'
-    $hexxDir = Join-Path $Root 'Games\Hexxagon'
-    Expand-Once $hexxZip $hexxDir '.ready-shareware'
-    $omfDir = Join-Path $Root 'Games\OneMustFall2097'
-    Expand-Once $omfZip $omfDir '.ready-full-version'
-    $jazzDir = Join-Path $Root 'Games\JazzJackrabbit'
-    Expand-Once $jazzZip $jazzDir '.ready-shareware-v11'
-    $jazzProgram = Get-ChildItem -LiteralPath $jazzDir -Filter 'JAZZ.EXE' -File -Recurse | Select-Object -First 1
-    $jazzSetupProgram = Get-ChildItem -LiteralPath $jazzDir -Filter 'SETUP.EXE' -File -Recurse | Select-Object -First 1
-    if (-not $jazzProgram -or -not $jazzSetupProgram) { throw 'El ZIP de Jazz Jackrabbit debe incluir JAZZ.EXE y SETUP.EXE.' }
-    Write-Log 'Jazz Jackrabbit v1.1 extraído como juego de la lista fija del setup.'
-    foreach ($extraGame in $extraGamePackages) {
-        $declaredExecutable = ([string]$extraGame.Executable).Trim()
-        if ([string]::IsNullOrWhiteSpace($declaredExecutable)) { throw "La fila de '$($extraGame.Title)' no indica el ejecutable. Añade la columna Executable a $extraGamesFile." }
-        $declaredExecutable = $declaredExecutable.Replace('/', '\')
-        if ([System.IO.Path]::IsPathRooted($declaredExecutable) -or $declaredExecutable -match '(^|\\)\.\.(\\|$)') {
-            throw "Executable debe ser un nombre o una ruta relativa dentro del juego: '$declaredExecutable' para '$($extraGame.Title)'."
-        }
-        $program = $null
-        if ($declaredExecutable.Contains('\')) {
-            $candidatePath = Join-Path $extraGame.Directory $declaredExecutable
-            $program = Get-Item -LiteralPath $candidatePath -ErrorAction SilentlyContinue
-            if ($program -and $program.PSIsContainer) { $program = $null }
-        } else {
-            $programMatches = @(Get-ChildItem -LiteralPath $extraGame.Directory -Filter $declaredExecutable -File -Recurse)
-            if ($programMatches.Count -gt 1) {
-                throw "Hay varios archivos llamados '$declaredExecutable' en '$($extraGame.Title)'. Indica en Executable la ruta relativa completa dentro del ZIP."
-            }
-            if ($programMatches.Count -eq 1) { $program = $programMatches[0] }
-        }
-        if (-not $program) { throw "No se encontró el ejecutable indicado '$declaredExecutable' para '$($extraGame.Title)' en su ZIP." }
-        $extraGame | Add-Member -NotePropertyName Program -NotePropertyValue $program -Force
-        Write-Log "Ejecutable detectado para '$($extraGame.Title)': $($program.Name)"
+    if (Expand-OptionalGame $pinballZip $pinballDir '.ready-demo-v1' 'Extreme Pinball') {
+        $pinballVideoConfig = Join-Path $pinballDir 'dosbox-video.conf'
+        @('[render]', 'aspect = stretch', 'viewport = fit', 'integer_scaling = off') | Set-Content -LiteralPath $pinballVideoConfig -Encoding ASCII
+        Write-Log 'Perfil de Extreme Pinball configurado para estirar la imagen a pantalla completa.'
     }
+    $doomDir = Join-Path $Root 'Games\DoomShareware'
+    $null = Expand-OptionalGame $doomZip $doomDir '.ready-shareware-v1' 'DOOM shareware'
+    $popDir = Join-Path $Root 'Games\PrinceOfPersiaDemo'
+    $null = Expand-OptionalGame $popZip $popDir '.ready-playable-demo' 'Prince of Persia demo'
+    $hexxDir = Join-Path $Root 'Games\Hexxagon'
+    $null = Expand-OptionalGame $hexxZip $hexxDir '.ready-shareware' 'Hexxagon'
+    $omfDir = Join-Path $Root 'Games\OneMustFall2097'
+    $null = Expand-OptionalGame $omfZip $omfDir '.ready-full-version' 'One Must Fall 2097'
+    $jazzDir = Join-Path $Root 'Games\JazzJackrabbit'
+    $null = Expand-OptionalGame $jazzZip $jazzDir '.ready-shareware-v11' 'Jazz Jackrabbit'
+    $jazzProgram = Find-GameFile $jazzDir @('JAZZ.EXE')
+    $jazzSetupProgram = Find-GameFile $jazzDir @('SETUP.EXE')
+    if ($jazzProgram -and $jazzSetupProgram) { Write-Log 'Jazz Jackrabbit v1.1 extraído como juego de la lista fija del setup.' }
+    else { Write-Log 'Se omite Jazz Jackrabbit: el paquete no contiene JAZZ.EXE y SETUP.EXE.' 'WARN' }
+    foreach ($extraGame in $extraGamePackages) {
+        try {
+            $declaredExecutable = ([string]$extraGame.Executable).Trim()
+            if ([string]::IsNullOrWhiteSpace($declaredExecutable)) { throw 'No se indicó Executable en el CSV.' }
+            $declaredExecutable = $declaredExecutable.Replace('/', '\')
+            if ([System.IO.Path]::IsPathRooted($declaredExecutable) -or $declaredExecutable -match '(^|\\)\.\.(\\|$)') {
+                throw "Executable debe ser un nombre o una ruta relativa dentro del juego: '$declaredExecutable'."
+            }
+            $program = $null
+            if ($declaredExecutable.Contains('\')) {
+                $candidatePath = Join-Path $extraGame.Directory $declaredExecutable
+                $program = Get-Item -LiteralPath $candidatePath -ErrorAction SilentlyContinue
+                if ($program -and $program.PSIsContainer) { $program = $null }
+            } else {
+                $programMatches = @(Get-ChildItem -LiteralPath $extraGame.Directory -Filter $declaredExecutable -File -Recurse -ErrorAction SilentlyContinue)
+                if ($programMatches.Count -gt 1) { throw "Hay varios archivos '$declaredExecutable'; indica su ruta relativa en Executable." }
+                if ($programMatches.Count -eq 1) { $program = $programMatches[0] }
+            }
+            if (-not $program) { throw "No se encontró el ejecutable '$declaredExecutable' dentro del ZIP." }
+            $extraGame | Add-Member -NotePropertyName Program -NotePropertyValue $program -Force
+            Write-Log "Ejecutable detectado para '$($extraGame.Title)': $($program.Name)"
+        }
+        catch { Write-Log "Se omite el juego extra '$($extraGame.Title)': $($_.Exception.Message)" 'WARN' }
+    }
+    $extraGamePackages = @($extraGamePackages | Where-Object { $_.Program })
 
     $esdeExe = Get-ChildItem -LiteralPath $esdeDir -Filter 'ES-DE.exe' -File -Recurse | Select-Object -First 1
     if (-not $esdeExe) { throw 'No se encontró ES-DE.exe dentro del ZIP portable.' }
     $dosboxExe = Get-ChildItem -LiteralPath $dosboxDir -Filter 'dosbox.exe' -File -Recurse | Select-Object -First 1
     if (-not $dosboxExe) { $dosboxExe = Get-ChildItem -LiteralPath $dosboxDir -Filter 'dosbox-staging.exe' -File -Recurse | Select-Object -First 1 }
     if (-not $dosboxExe) { throw 'No se encontró el ejecutable DOSBox dentro del ZIP portable.' }
-    $gameProgram = Get-ChildItem -LiteralPath $gameDir -Filter 'BRKMCH.BAT' -File -Recurse | Select-Object -First 1
-    if (-not $gameProgram) { $gameProgram = Get-ChildItem -LiteralPath $gameDir -Filter 'BRKMCH.EXE' -File -Recurse | Select-Object -First 1 }
-    if (-not $gameProgram) { $gameProgram = Get-ChildItem -LiteralPath $gameDir -Filter '*.BAT' -File -Recurse | Select-Object -First 1 }
-    if (-not $gameProgram) { $gameProgram = Get-ChildItem -LiteralPath $gameDir -Filter '*.EXE' -File -Recurse | Select-Object -First 1 }
-    if (-not $gameProgram) { throw 'No se encontró un archivo ejecutable BAT o EXE en el ZIP freeware.' }
-    $pinballProgram = Get-ChildItem -LiteralPath $pinballDir -Filter 'PINBALL.EXE' -File -Recurse | Select-Object -First 1
-    if (-not $pinballProgram) { $pinballProgram = Get-ChildItem -LiteralPath $pinballDir -Filter 'EXTREME.EXE' -File -Recurse | Select-Object -First 1 }
-    if (-not $pinballProgram) { $pinballProgram = Get-ChildItem -LiteralPath $pinballDir -Filter 'XPINBALL.EXE' -File -Recurse | Select-Object -First 1 }
-    if (-not $pinballProgram) { $pinballProgram = Get-ChildItem -LiteralPath $pinballDir -Filter '*.BAT' -File -Recurse | Select-Object -First 1 }
-    if (-not $pinballProgram) { $pinballProgram = Get-ChildItem -LiteralPath $pinballDir -Filter '*.EXE' -File -Recurse | Select-Object -First 1 }
-    if (-not $pinballProgram) { throw 'No se encontró un archivo ejecutable BAT o EXE en el ZIP de Extreme Pinball.' }
-    $doomProgram = Get-ChildItem -LiteralPath $doomDir -Filter 'DOOM.EXE' -File -Recurse | Select-Object -First 1
-    if (-not $doomProgram) { $doomProgram = Get-ChildItem -LiteralPath $doomDir -Filter '*.BAT' -File -Recurse | Select-Object -First 1 }
-    if (-not $doomProgram) { $doomProgram = Get-ChildItem -LiteralPath $doomDir -Filter '*.EXE' -File -Recurse | Select-Object -First 1 }
-    if (-not $doomProgram) { throw 'No se encontró DOOM.EXE ni otro lanzador BAT o EXE en el ZIP de DOOM.' }
-    $popBootstrap = Get-ChildItem -LiteralPath $popDir -Filter 'POP1DEMO.EXE' -File -Recurse | Select-Object -First 1
-    $popProgram = Get-ChildItem -LiteralPath $popDir -Filter 'PRINCE.EXE' -File -Recurse | Select-Object -First 1
-    if (-not $popProgram -and -not $popBootstrap) { throw 'No se encontró PRINCE.EXE ni el desempaquetador pop1demo.exe de la demo de Prince of Persia.' }
-    $hexxProgram = Get-ChildItem -LiteralPath $hexxDir -Filter 'HEXX.EXE' -File -Recurse | Select-Object -First 1
-    if (-not $hexxProgram) { $hexxProgram = Get-ChildItem -LiteralPath $hexxDir -Filter '*.BAT' -File -Recurse | Select-Object -First 1 }
-    if (-not $hexxProgram) { $hexxProgram = Get-ChildItem -LiteralPath $hexxDir -Filter '*.EXE' -File -Recurse | Select-Object -First 1 }
-    if (-not $hexxProgram) { throw 'No se encontró HEXX.EXE ni otro lanzador BAT o EXE en el ZIP de Hexxagon.' }
-    $omfInstaller = Get-ChildItem -LiteralPath $omfDir -Filter 'INSTALL.EXE' -File -Recurse | Select-Object -First 1
-    if (-not $omfInstaller) { throw 'No se encontró INSTALL.EXE en el ZIP completo de One Must Fall 2097.' }
+    $gameProgram = Find-GameFile $gameDir @('BRKMCH.BAT', 'BRKMCH.EXE', '*.BAT', '*.EXE')
+    if (-not $gameProgram) { Write-Log 'Se omite Break Machine: no se encontró un lanzador en el paquete.' 'WARN' }
+    $pinballProgram = Find-GameFile $pinballDir @('PINBALL.EXE', 'EXTREME.EXE', 'XPINBALL.EXE', '*.BAT', '*.EXE')
+    if (-not $pinballProgram) { Write-Log 'Se omite Extreme Pinball: no se encontró un lanzador en el paquete.' 'WARN' }
+    $doomProgram = Find-GameFile $doomDir @('DOOM.EXE', '*.BAT', '*.EXE')
+    if (-not $doomProgram) { Write-Log 'Se omite DOOM: no se encontró un lanzador en el paquete.' 'WARN' }
+    $popBootstrap = Find-GameFile $popDir @('POP1DEMO.EXE')
+    $popProgram = Find-GameFile $popDir @('PRINCE.EXE')
+    if (-not $popProgram -and -not $popBootstrap) { Write-Log 'Se omite Prince of Persia: falta PRINCE.EXE y pop1demo.exe.' 'WARN' }
+    $hexxProgram = Find-GameFile $hexxDir @('HEXX.EXE', '*.BAT', '*.EXE')
+    if (-not $hexxProgram) { Write-Log 'Se omite Hexxagon: no se encontró un lanzador en el paquete.' 'WARN' }
+    $omfInstaller = Find-GameFile $omfDir @('INSTALL.EXE')
+    if (-not $omfInstaller) { Write-Log 'Se omite One Must Fall 2097: no se encontró INSTALL.EXE.' 'WARN' }
 
     # ES-DE Portable mantiene sus datos y sistemas junto a la aplicación.
     New-Item -ItemType File -Path (Join-Path $esdeExe.DirectoryName 'portable.txt') -Force | Out-Null
     $romDir = Join-Path $esdeExe.DirectoryName 'ROMs\windows'
     New-Item -ItemType Directory -Path $romDir -Force | Out-Null
+    if ($gameProgram) {
     $launcher = Join-Path $romDir 'Break Machine (1995).bat'
     $dosboxRelative = Get-RelativePath $romDir $dosboxExe.FullName
     $gameRelative = Get-RelativePath $romDir $gameProgram.DirectoryName
@@ -230,7 +288,9 @@ try {
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $launcher -Encoding ASCII
+    }
 
+    if ($pinballProgram) {
     $pinballLauncher = Join-Path $romDir 'Extreme Pinball (1995).bat'
     $pinballGameRelative = Get-RelativePath $romDir $pinballProgram.DirectoryName
     @(
@@ -251,7 +311,9 @@ try {
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $pinballLauncher -Encoding ASCII
+    }
 
+    if ($doomProgram) {
     $doomLauncher = Join-Path $romDir 'DOOM (1993) (Shareware).bat'
     $doomGameRelative = Get-RelativePath $romDir $doomProgram.DirectoryName
     @(
@@ -272,7 +334,9 @@ try {
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $doomLauncher -Encoding ASCII
+    }
 
+    if ($jazzProgram -and $jazzSetupProgram) {
     $jazzLauncher = Join-Path $romDir 'Jazz Jackrabbit (1994) (Shareware).bat'
     $jazzGameRelative = Get-RelativePath $romDir $jazzProgram.DirectoryName
     @(
@@ -303,7 +367,9 @@ try {
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $jazzLauncher -Encoding ASCII
+    }
 
+    if ($popProgram -or $popBootstrap) {
     $popLauncher = Join-Path $romDir 'Prince of Persia (1990) (Demo).bat'
     $popGameDirectory = if ($popProgram) { $popProgram.DirectoryName } else { $popBootstrap.DirectoryName }
     $popGameRelative = Get-RelativePath $romDir $popGameDirectory
@@ -328,7 +394,9 @@ try {
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $popLauncher -Encoding ASCII
+    }
 
+    if ($hexxProgram) {
     $hexxLauncher = Join-Path $romDir 'Hexxagon (1993).bat'
     $hexxGameRelative = Get-RelativePath $romDir $hexxProgram.DirectoryName
     @(
@@ -349,7 +417,9 @@ try {
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $hexxLauncher -Encoding ASCII
+    }
 
+    if ($omfInstaller) {
     $omfLauncher = Join-Path $romDir 'One Must Fall 2097 (1994).bat'
     $omfGameRelative = Get-RelativePath $romDir $omfDir
     @(
@@ -376,6 +446,7 @@ try {
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $omfLauncher -Encoding ASCII
+    }
 
     foreach ($extraGame in $extraGamePackages) {
         $safeTitle = $extraGame.Title -replace '[<>:"/\\|?*]', '_'
@@ -413,6 +484,16 @@ try {
         $extraGame | Add-Member -NotePropertyName Launcher -NotePropertyValue $extraLauncherName -Force
     }
 
+    $availableGameFiles = @{}
+    if ($gameProgram) { $availableGameFiles['Break Machine (1995).bat'] = $true }
+    if ($pinballProgram) { $availableGameFiles['Extreme Pinball (1995).bat'] = $true }
+    if ($jazzProgram -and $jazzSetupProgram) { $availableGameFiles['Jazz Jackrabbit (1994) (Shareware).bat'] = $true }
+    if ($doomProgram) { $availableGameFiles['DOOM (1993) (Shareware).bat'] = $true }
+    if ($popProgram -or $popBootstrap) { $availableGameFiles['Prince of Persia (1990) (Demo).bat'] = $true }
+    if ($hexxProgram) { $availableGameFiles['Hexxagon (1993).bat'] = $true }
+    if ($omfInstaller) { $availableGameFiles['One Must Fall 2097 (1994).bat'] = $true }
+    foreach ($extraGame in $extraGamePackages) { $availableGameFiles[$extraGame.Launcher] = $true }
+
     # Put release years in filenames and gamelist metadata to help scraper matching.
     $gameYearMetadata = @(
         [pscustomobject]@{ Old='Break Machine.bat'; File='Break Machine (1995).bat'; Name='Break Machine (1995)'; Date='19950101T000000' },
@@ -432,16 +513,43 @@ try {
         $gameYearMetadata += [pscustomobject]@{ Old=$extraFile; File=$extraFile; Name=$displayTitle; Date=$extraDate }
     }
     $gamelistDirectory = Join-Path $esdeExe.DirectoryName 'ES-DE\gamelists\windows'
-    New-Item -ItemType Directory -Path $gamelistDirectory -Force | Out-Null
-    $gamelistPath = Join-Path $gamelistDirectory 'gamelist.xml'
-    if (Test-Path -LiteralPath $gamelistPath) {
-        [xml]$gamelist = Get-Content -LiteralPath $gamelistPath -Raw -Encoding UTF8
+    $targetGamelistPath = Join-Path $gamelistDirectory 'gamelist.xml'
+    if (Test-Path -LiteralPath $targetGamelistPath) {
+        [xml]$gamelist = Get-Content -LiteralPath $targetGamelistPath -Raw -Encoding UTF8
     } else {
         [xml]$gamelist = '<gameList />'
     }
+    $metadataStaging = Join-Path $Cache 'metadata-staging'
+    Remove-Item -LiteralPath $metadataStaging -Recurse -Force -ErrorAction SilentlyContinue
+    $stagingGamelistDirectory = Join-Path $metadataStaging 'gamelists\windows'
+    $stagingMediaDirectory = Join-Path $metadataStaging 'downloaded_media\windows\screenshots'
+    New-Item -ItemType Directory -Path $stagingGamelistDirectory, $stagingMediaDirectory -Force | Out-Null
+    $metadataImageCache = Join-Path $Cache 'metadata-images'
+    New-Item -ItemType Directory -Path $metadataImageCache -Force | Out-Null
+    $metadataSourcesFile = Join-Path $Root 'metadata_sources.csv'
+    $metadataSources = @()
+    if (Test-Path -LiteralPath $metadataSourcesFile) {
+        try {
+            $metadataSources = @(Import-Csv -LiteralPath $metadataSourcesFile -Delimiter ';' -Encoding UTF8 | Where-Object { $_.GameFile -or $_.SourceUrl })
+        }
+        catch {
+            Write-Log "No se pudo leer $metadataSourcesFile; se conservarán solo los metadatos locales. Detalle: $($_.Exception.Message)" 'WARN'
+        }
+    }
     foreach ($item in $gameYearMetadata) {
-        $oldPath = './' + $item.Old
         $newPath = './' + $item.File
+        $oldPath = './' + $item.Old
+        if (-not $availableGameFiles.ContainsKey($item.File)) {
+            foreach ($candidate in @($gamelist.gameList.game)) {
+                if ($candidate.path -eq $oldPath -or $candidate.path -eq $newPath) { $null = $gamelist.DocumentElement.RemoveChild($candidate) }
+            }
+            $obsoleteLauncher = Join-Path $romDir $item.File
+            if (Test-Path -LiteralPath $obsoleteLauncher) { Remove-Item -LiteralPath $obsoleteLauncher -Force }
+            $oldLauncher = Join-Path $romDir $item.Old
+            if ($item.Old -ne $item.File -and (Test-Path -LiteralPath $oldLauncher)) { Remove-Item -LiteralPath $oldLauncher -Force }
+            Write-Log "No se añade '$($item.Name)' a ES-DE porque no se generó su lanzador." 'WARN'
+            continue
+        }
         $entry = $null
         foreach ($candidate in @($gamelist.gameList.game)) {
             if ($candidate.path -eq $oldPath -or $candidate.path -eq $newPath) { $entry = $candidate; break }
@@ -457,10 +565,72 @@ try {
             if (-not $node) { $node = $gamelist.CreateElement($field[0]); $null = $entry.AppendChild($node) }
             $node.InnerText = $field[1]
         }
+        $metadataSource = $metadataSources | Where-Object { $_.GameFile -eq $item.File } | Select-Object -First 1
+        if ($metadataSource -and -not [string]::IsNullOrWhiteSpace($metadataSource.SourceUrl)) {
+            $stagedImage = $null
+            $imageDownloadPart = $null
+            try {
+                Write-Log "Obteniendo metadatos e imagen para $($item.Name) desde $($metadataSource.SourceUrl)"
+                $pageData = Get-GamePageData $metadataSource.SourceUrl
+                if (-not [string]::IsNullOrWhiteSpace($pageData.Description)) {
+                    $descriptionNode = $entry.SelectSingleNode('desc')
+                    if (-not $descriptionNode) { $descriptionNode = $gamelist.CreateElement('desc'); $null = $entry.AppendChild($descriptionNode) }
+                    $descriptionNode.InnerText = $pageData.Description
+                }
+                $imageUrl = if (-not [string]::IsNullOrWhiteSpace($metadataSource.ImageUrl)) { $metadataSource.ImageUrl.Trim() } else { $pageData.ImageUrl }
+                if ([string]::IsNullOrWhiteSpace($pageData.Description) -and [string]::IsNullOrWhiteSpace($imageUrl)) {
+                    Write-Log "La fuente no encontró metadatos para $($item.Name); se conserva el título y año locales." 'WARN'
+                }
+                if (-not [string]::IsNullOrWhiteSpace($imageUrl)) {
+                    $imageUri = [System.Uri]$imageUrl
+                    $safeImageBase = [System.IO.Path]::GetFileNameWithoutExtension($item.File)
+                    $urlHasher = [System.Security.Cryptography.SHA256]::Create()
+                    try { $urlKey = [System.BitConverter]::ToString($urlHasher.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($imageUrl))).Replace('-', '').Substring(0, 12) }
+                    finally { $urlHasher.Dispose() }
+                    $cachedImageSource = Join-Path $metadataImageCache "$safeImageBase-$urlKey.bin"
+                    if (-not (Test-Path -LiteralPath $cachedImageSource) -or -not (Get-ImageFormat $cachedImageSource)) {
+                        Remove-Item -LiteralPath $cachedImageSource -Force -ErrorAction SilentlyContinue
+                        $imageDownloadPart = "$cachedImageSource.part"
+                        Invoke-WebRequest -Uri $imageUrl -OutFile $imageDownloadPart -MaximumRedirection 10 -UseBasicParsing
+                        if (-not (Get-ImageFormat $imageDownloadPart)) { throw "La URL de imagen no devolvió un archivo de imagen válido: $imageUrl" }
+                        Move-Item -LiteralPath $imageDownloadPart -Destination $cachedImageSource -Force
+                        $imageDownloadPart = $null
+                    }
+                    $actualImageExtension = Get-ImageFormat $cachedImageSource
+                    $imageName = $safeImageBase + $(if ($actualImageExtension -eq '.gif') { '.png' } else { $actualImageExtension })
+                    $stagedImage = Join-Path $stagingMediaDirectory $imageName
+                    if ($actualImageExtension -eq '.gif') {
+                        Add-Type -AssemblyName System.Drawing
+                        $gifImage = [System.Drawing.Image]::FromFile($cachedImageSource)
+                        try { $gifImage.Save($stagedImage, [System.Drawing.Imaging.ImageFormat]::Png) }
+                        finally { $gifImage.Dispose() }
+                    } else {
+                        Copy-Item -LiteralPath $cachedImageSource -Destination $stagedImage -Force
+                    }
+                    Write-Log "Imagen preparada en la carpeta temporal: $imageName"
+                } elseif (-not [string]::IsNullOrWhiteSpace($pageData.Description)) {
+                    Write-Log "La página no ofrece una imagen Open Graph para $($item.Name)." 'WARN'
+                }
+            }
+            catch {
+                if ($imageDownloadPart -and (Test-Path -LiteralPath $imageDownloadPart)) { Remove-Item -LiteralPath $imageDownloadPart -Force }
+                if ($stagedImage -and (Test-Path -LiteralPath $stagedImage)) { Remove-Item -LiteralPath $stagedImage -Force }
+                Write-Log "No se pudieron obtener metadatos de $($item.Name): $($_.Exception.Message)" 'WARN'
+            }
+        } else {
+            Write-Log "No hay una fuente de metadatos para $($item.Name); se conserva el título y año locales." 'WARN'
+        }
         $legacyLauncher = Join-Path $romDir $item.Old
         if ($item.Old -ne $item.File -and (Test-Path -LiteralPath $legacyLauncher)) { Remove-Item -LiteralPath $legacyLauncher -Force }
     }
-    $gamelist.Save($gamelistPath)
+    $stagingGamelistPath = Join-Path $stagingGamelistDirectory 'gamelist.xml'
+    $gamelist.Save($stagingGamelistPath)
+    New-Item -ItemType Directory -Path $gamelistDirectory -Force | Out-Null
+    Copy-Item -LiteralPath $stagingGamelistPath -Destination $targetGamelistPath -Force
+    $targetMediaDirectory = Join-Path $esdeExe.DirectoryName 'ES-DE\downloaded_media\windows\screenshots'
+    New-Item -ItemType Directory -Path $targetMediaDirectory -Force | Out-Null
+    Get-ChildItem -LiteralPath $stagingMediaDirectory -File | Copy-Item -Destination $targetMediaDirectory -Force
+    Write-Log "Metadatos preparados en caché temporal y copiados a ES-DE: $metadataStaging"
 
     $shortcut = Join-Path $Root 'run-retro-portable.bat'
     @('@echo off', ('start "" "{0}" --debug' -f $esdeExe.FullName)) | Set-Content -LiteralPath $shortcut -Encoding ASCII

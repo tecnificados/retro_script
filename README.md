@@ -9,7 +9,7 @@ Este repositorio prepara una instalación portable de **ES-DE** y **DOSBox Stagi
 3. Cuando termine sin errores, ejecuta `run-retro-portable.bat` para abrir ES-DE.
 4. En ES-DE, selecciona un juego y pulsa Intro. Los lanzadores incluidos ejecutan DOSBox a pantalla completa. Extreme Pinball estira la imagen para ocupar también los lados de una pantalla panorámica; esto puede deformar un poco sus proporciones.
 
-Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan. Para borrar la caché y la instalación descargada o extraída y empezar de cero, ejecuta `clean.bat`; conserva los scripts, la documentación y `extra_games.csv`.
+Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan. Para borrar la caché y la instalación descargada o extraída y empezar de cero, ejecuta `clean.bat`; conserva los scripts, la documentación, `extra_games.csv` y `metadata_sources.csv`.
 
 ## Añadir juegos
 
@@ -25,7 +25,9 @@ Cada fila requiere título, URL directa a un ZIP y el ejecutable incluido en el 
 Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;TET.EXE;1989
 ```
 
-El setup procesa todas las filas con la misma lógica: descarga el ZIP en `.setup-cache\extra-<slug>.zip`, lo descomprime en su carpeta `Games\Extras\<slug>` y genera un lanzador en ES-DE. El lanzador monta la carpeta raíz del juego en DOSBox y ejecuta el archivo indicado en `Executable`, manteniendo disponibles los demás archivos y subcarpetas del ZIP. No hay reglas especiales por juego para las filas del CSV. El año queda como metadato local; el scraping depende del proveedor que tengas configurado en ES-DE. Esta configuración genérica presupone que el ejecutable se puede iniciar directamente; los juegos que necesiten instalador, argumentos o configuración inicial no se preparan automáticamente. Jazz Jackrabbit es un juego fijo del setup y conserva su configuración de sonido de primera ejecución.
+El setup procesa todas las filas con la misma lógica: descarga el ZIP en `.setup-cache\extra-<slug>.zip`, lo descomprime en su carpeta `Games\Extras\<slug>` y genera un lanzador en ES-DE. El lanzador monta la carpeta raíz del juego en DOSBox y ejecuta el archivo indicado en `Executable`, manteniendo disponibles los demás archivos y subcarpetas del ZIP. Si falla la descarga, extracción o detección del ejecutable de un juego, el setup lo omite, lo registra como aviso y sigue con los demás. No hay reglas especiales por juego para las filas del CSV. El año queda como metadato local; el scraping depende del proveedor que tengas configurado en ES-DE. Esta configuración genérica presupone que el ejecutable se puede iniciar directamente; los juegos que necesiten instalador, argumentos o configuración inicial no se preparan automáticamente. Jazz Jackrabbit es un juego fijo del setup y conserva su configuración de sonido de primera ejecución.
+
+El setup también prepara metadatos iniciales desde las páginas indicadas en [`metadata_sources.csv`](metadata_sources.csv). Descarga previamente las imágenes directas a `.setup-cache\metadata-images`, deja el `gamelist.xml` y las imágenes ya preparadas en `.setup-cache\metadata-staging` y después los copia a la instalación portable de ES-DE. Para una fila extra, añade el nombre exacto del `.bat` generado, la página del juego y, opcionalmente, una URL directa de imagen. Se usa esa imagen directa si se indicó; en caso contrario se busca la imagen Open Graph de la página. Los GIF se convierten a PNG y se reutilizan desde caché al reintentar. Título y año siguen procediendo del catálogo local. Si una fuente falla, el setup continúa con los datos locales y lo anota en `setup.log`.
 
 Después de editar el CSV, ejecuta `setup-retro-portable.bat` otra vez.
 
@@ -44,9 +46,14 @@ Si el ZIP se descargó pero no se configuró, revisa que `Executable` coincida c
 - [Estado técnico y catálogo](docs/estado-del-proyecto.md)
 - [Flujo del setup, caché y CSV](docs/flujo-setup.md)
 - [Guía para retomar el proyecto](docs/retomar-proyecto.md)
+- [Fuentes de metadatos iniciales](metadata_sources.csv)
 
 ES-DE se navega con teclado o mando; la versión usada no ofrece navegación nativa con ratón. Los binarios descargados, juegos extraídos, ES-DE, DOSBox y logs están excluidos de Git mediante `.gitignore`. Se versionan los scripts, `extra_games.csv` y esta documentación. El usuario realiza sus propios commits.
 
 ## Licencias
 
 El setup descarga componentes y juegos de terceros. Las etiquetas freeware, demo y shareware identifican el tipo de paquete que se seleccionó; no sustituyen la licencia de cada titular. Consulta `LICENSE` para la licencia del contenido propio del repositorio y verifica los términos de cada descarga antes de redistribuirla.
+
+## Autoría
+
+Juan Carlos Ballesteros Hermida — Tecnificados — [www.tecnificados.com](https://www.tecnificados.com)

@@ -19,6 +19,8 @@ Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzl
 
 Los paquetes base usan nombres estables declarados en `$Downloads`; Jazz Jackrabbit forma parte de esa lista fija. Los juegos del CSV usan `extra-<slug>.zip`. Una repetición del setup reutiliza ZIP válidos, y `Expand-Once` evita extraer otra vez las carpetas con su marcador `.ready`.
 
+ES-DE y DOSBox son requisitos del setup. Cada descarga de juego se intenta de forma independiente; si un ZIP no está disponible o no puede extraerse, el setup registra un aviso y continúa con el siguiente paquete. También omite solo ese juego si no localiza su ejecutable, sin crearle un lanzador ni una entrada de gamelist. Las filas extra del CSV tienen el mismo comportamiento independiente.
+
 Una URL puede resolver en el equipo del usuario y fallar en otro entorno por DNS o conectividad. No cambiar una URL solo porque una ejecución aislada no pueda resolver su dominio; verificar el error y conservar la fuente solicitada.
 
 ## Instalación y lanzamiento
@@ -35,17 +37,27 @@ Para cada fila extra:
 
 Todas las filas del CSV recorren el mismo proceso genérico; no hay condiciones por título. Este proceso presupone que el ejecutable declarado puede abrirse directamente desde DOSBox con la raíz del ZIP montada como `C:`. Los paquetes que necesiten instalación o pasos de configuración no se preparan automáticamente. Jazz Jackrabbit está fuera del CSV, en la lista fija del setup, y mantiene su paso específico de configuración de sonido.
 
+## Scraper inicial y preparación temporal
+
+`metadata_sources.csv` relaciona el nombre exacto del lanzador (`GameFile`) con la página del juego y, opcionalmente, una URL directa de imagen (`ImageUrl`). El setup descarga previamente los archivos de imagen y los conserva en `.setup-cache\metadata-images`; si no hay URL directa, intenta usar `og:image` o `twitter:image` de la página. Reconoce JPEG, PNG, WebP y GIF; convierte los GIF a PNG, ya que ES-DE acepta medios `.jpg`, `.png` y `.webp`. El título y el año siguen viniendo de los metadatos locales del catálogo; no se sustituye el scraper seleccionado en ES-DE ni se consulta MobyGames.
+
+Los archivos se preparan primero en `.setup-cache\metadata-staging\gamelists\windows` y `.setup-cache\metadata-staging\downloaded_media\windows\screenshots`. Cuando ya existen los lanzadores y sus entradas, el setup copia el gamelist a `ES-DE\ES-DE\gamelists\windows` y las imágenes a `ES-DE\ES-DE\downloaded_media\windows\screenshots`. Las imágenes ya descargadas se reutilizan al reintentar; `clean.bat` borra tanto esa caché como la carpeta temporal de preparación. Si una página no encuentra el juego, no tiene metadatos o falla la descarga, se registra un aviso, se conservan título/año locales y se sigue con los demás juegos; el setup no se detiene por el scraper.
+
+ES-DE portable busca los medios en `ES-DE\ES-DE\downloaded_media\<sistema>\<tipo>` y asocia las imágenes con el nombre del archivo del juego; por eso el setup usa el sistema `windows` y el nombre base de cada `.bat`. Referencia: [guía oficial de ES-DE, copia manual de medios](https://gitlab.com/es-de/emulationstation-de/-/blob/master/USERGUIDE.md).
+
+Para añadir fuentes a un juego del CSV, agrega una fila en `metadata_sources.csv` con el mismo nombre de `.bat` que genera el título, la URL de la página y, si la página no ofrece una imagen adecuada, una URL directa de imagen. Este paso es opcional: sin fuente, se conservan el título y año locales y ES-DE puede usar después su scraper configurado.
+
 ## Archivos de registro y salida
 
 - `setup.log`: registro acumulado del setup, UTF-8 con BOM.
 - `ES-DE\...\logs\es_log.txt`: registro de ES-DE; el acceso generado habilita `--debug`.
 - `<título> launch.log`: salida del proceso DOSBox para cada juego.
 - `run-retro-portable.bat`: acceso a ES-DE, generado por el setup.
-- `clean.bat`: confirma y elimina caché, emuladores y juegos extraídos, instalación de ES-DE, log y acceso generado; conserva los scripts, documentos, licencia y CSV.
+- `clean.bat`: confirma y elimina caché (incluida la carpeta temporal de metadatos), emuladores y juegos extraídos, instalación de ES-DE, log y acceso generado; conserva los scripts, documentos, licencia, `extra_games.csv` y `metadata_sources.csv`.
 
 ## Idempotencia y limpieza
 
-Si se borran `Emulators`, `ES-DE`, `Games` y el acceso de lanzamiento pero se conservan los scripts, `extra_games.csv` y `.setup-cache`, el setup puede reconstruir la instalación. Si se borra además la caché, volverá a descargar los paquetes.
+Si se borran `Emulators`, `ES-DE`, `Games` y el acceso de lanzamiento pero se conservan los scripts, los CSV y `.setup-cache`, el setup puede reconstruir la instalación. Si se borra además la caché, volverá a descargar los paquetes y generar los metadatos iniciales.
 
 Al retirar una fila del CSV, comprobar si el setup elimina también el lanzador y la entrada obsoleta de `gamelist.xml`: actualmente el script añade o actualiza los juegos configurados, pero no reconcilia automáticamente todas las filas antiguas que se hayan borrado del CSV. Limpiar manualmente cualquier salida obsoleta generada al retirar un juego o implementar una reconciliación segura antes de depender de ese comportamiento.
 

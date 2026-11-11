@@ -40,11 +40,18 @@ El setup aplica la misma lógica a todas las filas: conserva cada ZIP en caché,
 
 El año se conserva en el nombre y en los metadatos locales de ES-DE. El scraping usa el proveedor que el usuario configure en ES-DE; el setup no presupone MobyGames ni otro servicio. El intento del 11 de noviembre de 2026 no pudo resolver `archive.org` desde este entorno, así que no se confirmó que Tet42 se descargara o aparezca en ES-DE. Se conserva la URL proporcionada; reintentar desde una red que resuelva el dominio.
 
+## Metadatos iniciales
+
+`metadata_sources.csv` define una página y una URL directa de imagen opcional por nombre de lanzador. El setup descarga previamente las imágenes a `.setup-cache\metadata-images`, genera el material en `.setup-cache\metadata-staging` y lo copia a ES-DE una vez creados los lanzadores. Los GIF se convierten a PNG; la caché de imágenes se reutiliza al reintentar y `clean.bat` la borra. Un fallo de fuente no detiene el setup. Para un juego extra, añade el nombre exacto del `.bat` generado.
+
+La última ejecución confirmada por el usuario mostró correctamente las imágenes preparadas por este flujo en ES-DE.
+
 ## Convenciones de trabajo
 
 - Repositorio de trabajo: `D:\git\retro_script`.
 - Comunicación y documentación del proyecto: español; conservar UTF-8.
 - El usuario hace los commits. No crear commits ni hacer push.
 - Las carpetas de distribución y ejecución están ignoradas por Git; consultar `.gitignore` antes de añadir archivos generados.
+- Las descargas, extracciones y detecciones de ejecutable de juegos son independientes: si falla una, se registra aviso y se omite ese juego, mientras los demás siguen procesándose. ES-DE y DOSBox continúan siendo necesarios para terminar la instalación.
 - `clean.bat` solicita confirmación y borra caché, ES-DE, DOSBox, juegos extraídos, log y lanzador generado. Conserva scripts, documentación, licencia y `extra_games.csv`.
 - Al cambiar descargas, catálogo o lanzadores, actualizar este documento y `README.md` si cambia el flujo para el usuario.
