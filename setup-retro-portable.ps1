@@ -15,7 +15,7 @@ $DosboxVersion = '0.83.0'
 $Downloads = @(
     [pscustomobject]@{ Name='ES-DE'; Url="https://packages.es-de.org/release/$EsdeVersion/ES-DE_${EsdeVersion}-x64_Portable.zip"; Archive='esde.zip' },
     [pscustomobject]@{ Name='DOSBox Staging'; Url="https://github.com/dosbox-staging/dosbox-staging/releases/download/v$DosboxVersion/dosbox-staging-windows-x64-v$DosboxVersion.zip"; Archive='dosbox.zip' },
-    [pscustomobject]@{ Name='Break Machine freeware v1.4'; Url='https://d1.xp.myabandonware.com/t/554209a9-71a5-4c7a-af20-1fe33afece8d/Break-Machine_DOS_EN_v14-Freeware.zip'; Archive='break-machine-freeware-v14.zip' },
+    [pscustomobject]@{ Name='Break Machine freeware v1.4'; Url='https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip'; Archive='break-machine-freeware-v14-archive-org.zip' },
     [pscustomobject]@{ Name='Extreme Pinball demo'; Url='https://dosgames.com/files/DOSBOX_EXTREMEPINBALL.ZIP'; Archive='extreme-pinball-demo.zip' },
     [pscustomobject]@{ Name='DOOM shareware'; Url='https://dosgames.com/files/DOSBOX_DOOM.ZIP'; Archive='doom-shareware-dosbox.zip' },
     [pscustomobject]@{ Name='Prince of Persia playable demo'; Url='https://dosgames.com/files/pop1.zip'; Archive='prince-of-persia-playable-demo.zip' },
@@ -123,6 +123,9 @@ try {
     Expand-Once $gameZip $gameDir '.ready-freeware-v14'
     $pinballDir = Join-Path $Root 'Games\ExtremePinball'
     Expand-Once $pinballZip $pinballDir '.ready-demo-v1'
+    $pinballVideoConfig = Join-Path $pinballDir 'dosbox-video.conf'
+    @('[render]', 'aspect = stretch', 'viewport = fit', 'integer_scaling = off') | Set-Content -LiteralPath $pinballVideoConfig -Encoding ASCII
+    Write-Log 'Perfil de Extreme Pinball configurado para estirar la imagen a pantalla completa.'
     $doomDir = Join-Path $Root 'Games\DoomShareware'
     Expand-Once $doomZip $doomDir '.ready-shareware-v1'
     $popDir = Join-Path $Root 'Games\PrinceOfPersiaDemo'
@@ -211,7 +214,7 @@ try {
         'echo DOSBox: "%DOSBOX%" >> "%LOG%"',
         'echo Game folder: "%GAMEDIR%" >> "%LOG%"',
         'pushd "%GAMEDIR%"',
-        ('"%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "{0}" >> "%LOG%" 2>&1' -f $pinballProgram.Name),
+        ('"%DOSBOX%" --conf "%GAMEDIR%\dosbox-video.conf" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "{0}" >> "%LOG%" 2>&1' -f $pinballProgram.Name),
         'set "DOSBOX_EXIT=%ERRORLEVEL%"',
         'popd',
         'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',

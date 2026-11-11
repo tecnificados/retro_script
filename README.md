@@ -7,7 +7,7 @@ Este repositorio prepara una instalación portable de **ES-DE** y **DOSBox Stagi
 1. Descarga o clona este repositorio en una carpeta local de Windows.
 2. Ejecuta `setup-retro-portable.bat`. El setup puede tardar mientras descarga ES-DE, DOSBox y los juegos configurados.
 3. Cuando termine sin errores, ejecuta `run-retro-portable.bat` para abrir ES-DE.
-4. En ES-DE, selecciona un juego y pulsa Intro. Los lanzadores incluidos ejecutan DOSBox a pantalla completa.
+4. En ES-DE, selecciona un juego y pulsa Intro. Los lanzadores incluidos ejecutan DOSBox a pantalla completa. Extreme Pinball estira la imagen para ocupar también los lados de una pantalla panorámica; esto puede deformar un poco sus proporciones.
 
 Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan.
 

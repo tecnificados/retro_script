@@ -14,6 +14,8 @@ Lee primero `README.md`, `docs/estado-del-proyecto.md` y `docs/flujo-setup.md`. 
 - Pendiente: confirmar el arranque real de Jazz desde ES-DE.
 - Beneath a Steel Sky fue retirado a petición del usuario. No reintroducirlo ni añadir montaje de imágenes de CD para ese caso.
 - Los juegos base anteriores siguen definidos dentro del setup.
+- Extreme Pinball usa `Games\ExtremePinball\dosbox-video.conf` para estirar la imagen hasta el área completa de la pantalla; las proporciones pueden deformarse. El setup genera este archivo y su lanzador lo carga con `--conf`.
+- Break Machine ahora usa el ZIP de Internet Archive definido en `setup-retro-portable.ps1` y una clave nueva de caché (`break-machine-freeware-v14-archive-org.zip`), para no reutilizar la descarga de la fuente anterior.
 
 ## Próximo paso útil
 

@@ -14,7 +14,7 @@ El script `setup-retro-portable.ps1` descarga y configura:
 | --- | --- | --- |
 | ES-DE | Portable 3.5.0 | Interfaz y gamelist de Windows |
 | DOSBox Staging | 0.83.0 | Emulador DOS |
-| Break Machine | Freeware v1.4 | 1995 |
+| Break Machine | Freeware v1.4 ([ZIP en Internet Archive](https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip)) | 1995 |
 | Extreme Pinball | Demo | 1995 |
 | DOOM | Shareware | 1993 |
 | Prince of Persia | Demo jugable | 1990 |
@@ -22,7 +22,7 @@ El script `setup-retro-portable.ps1` descarga y configura:
 | One Must Fall 2097 | Versión completa seleccionada | 1994; requiere instalación DOS inicial |
 | Jazz Jackrabbit | `juegos-extra.csv`; shareware 1.1 | 1994 |
 
-Los lanzadores incluidos se generan con DOSBox a pantalla completa. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la instalación en la ruta predeterminada `C:\OMF`.
+Los lanzadores incluidos se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento a pantalla completa para reducir las bandas negras en pantallas panorámicas. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la instalación en la ruta predeterminada `C:\OMF`.
 
 ## Estado de Jazz Jackrabbit
 

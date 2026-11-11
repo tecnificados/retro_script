@@ -23,7 +23,7 @@ Una URL puede resolver en el equipo del usuario y fallar en otro entorno por DNS
 
 ## Instalación y lanzamiento
 
-El script extrae ES-DE y DOSBox bajo la carpeta del repositorio. Extrae cada juego en `Games`, busca sus ejecutables y escribe lanzadores `.bat` bajo `ES-DE\...\ROMs\windows`. Los lanzadores construyen rutas relativas desde ES-DE y llevan un log propio. Los lanzadores DOSBox incluidos usan `--fullscreen`.
+El script extrae ES-DE y DOSBox bajo la carpeta del repositorio. Extrae cada juego en `Games`, busca sus ejecutables y escribe lanzadores `.bat` bajo `ES-DE\...\ROMs\windows`. Los lanzadores construyen rutas relativas desde ES-DE y llevan un log propio. Los lanzadores DOSBox incluidos usan `--fullscreen`. Extreme Pinball también usa un archivo de configuración específico de DOSBox Staging con `aspect = stretch`, `viewport = fit` e `integer_scaling = off` para llenar la pantalla panorámica, a costa de alterar las proporciones de la imagen.
 
 Para cada fila extra:
 
