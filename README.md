@@ -9,23 +9,23 @@ Este repositorio prepara una instalación portable de **ES-DE** y **DOSBox Stagi
 3. Cuando termine sin errores, ejecuta `run-retro-portable.bat` para abrir ES-DE.
 4. En ES-DE, selecciona un juego y pulsa Intro. Los lanzadores incluidos ejecutan DOSBox a pantalla completa. Extreme Pinball estira la imagen para ocupar también los lados de una pantalla panorámica; esto puede deformar un poco sus proporciones.
 
-Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan.
+Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan. Para borrar la caché y la instalación descargada o extraída y empezar de cero, ejecuta `clean.bat`; conserva los scripts, la documentación y `extra_games.csv`.
 
 ## Añadir juegos
 
-Los juegos adicionales se declaran en [`juegos-extra.csv`](juegos-extra.csv), en UTF-8 y separado por punto y coma. El encabezado es:
+Los juegos adicionales se declaran en [`extra_games.csv`](extra_games.csv), en UTF-8 y separado por punto y coma. El encabezado es:
 
 ```csv
-Title;DownloadUrl;Year
+Title;DownloadUrl;Executable;Year
 ```
 
-Cada fila requiere título y URL directa a un ZIP. El año es opcional y, si se indica, se usa en el nombre mostrado y en los metadatos de ES-DE para ayudar al scraper. Ejemplo actual:
+Cada fila requiere título, URL directa a un ZIP y el ejecutable incluido en el ZIP. `Executable` puede ser un nombre como `TET.EXE` o una ruta relativa como `BIN\JUEGO.EXE`; no se permiten rutas absolutas ni segmentos `..`. Si solo se indica un nombre y aparece más de una vez en el ZIP, el setup se detiene y pide la ruta completa. El año es opcional y se usa en el nombre mostrado y en los metadatos locales de ES-DE. Ejemplo actual:
 
 ```csv
-Jazz Jackrabbit;https://image.dosgamesarchive.com/games/jazz.zip;1994
+Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;TET.EXE;1989
 ```
 
-El setup descarga el ZIP en `.setup-cache\extra-<slug>.zip`, lo extrae en `Games\Extras\<slug>`, busca un `.EXE`, `.COM` o `.BAT` que no parezca instalador y genera un lanzador en la carpeta de ROMs de ES-DE. El ZIP de Jazz Jackrabbit incluye un configurador de sonido: su lanzador lo abre en la primera ejecución y, cuando se guarda la configuración, inicia el juego. El archivo debe contener un ejecutable DOS lanzable directamente; otros paquetes con instaladores o formatos especiales pueden requerir lógica específica.
+El setup procesa todas las filas con la misma lógica: descarga el ZIP en `.setup-cache\extra-<slug>.zip`, lo descomprime en su carpeta `Games\Extras\<slug>` y genera un lanzador en ES-DE. El lanzador monta la carpeta raíz del juego en DOSBox y ejecuta el archivo indicado en `Executable`, manteniendo disponibles los demás archivos y subcarpetas del ZIP. No hay reglas especiales por juego para las filas del CSV. El año queda como metadato local; el scraping depende del proveedor que tengas configurado en ES-DE. Esta configuración genérica presupone que el ejecutable se puede iniciar directamente; los juegos que necesiten instalador, argumentos o configuración inicial no se preparan automáticamente. Jazz Jackrabbit es un juego fijo del setup y conserva su configuración de sonido de primera ejecución.
 
 Después de editar el CSV, ejecuta `setup-retro-portable.bat` otra vez.
 
@@ -37,7 +37,7 @@ Después de editar el CSV, ejecuta `setup-retro-portable.bat` otra vez.
 
 Si una descarga falla, revisa la URL, la conexión y el error concreto en `setup.log`. Los errores DNS pueden depender del entorno o la red desde la que se ejecuta el setup. Al reintentar, los paquetes completos ya guardados en caché no se descargan de nuevo. Una descarga parcial `.part` se valida antes de reutilizarse.
 
-Si el ZIP se descargó pero no se configuró, revisa si contiene un ejecutable DOS directamente. Si usa un instalador o un formato especial, no añadas una detección genérica que ejecute cualquier `.EXE`: documenta e implementa el flujo de ese juego por separado.
+Si el ZIP se descargó pero no se configuró, revisa que `Executable` coincida con un archivo del ZIP. Si está en una subcarpeta, especifica la ruta relativa. El sistema no elige automáticamente un `.EXE` para evitar lanzar por error un instalador o configurador.
 
 ## Archivos y estado del proyecto
 
@@ -45,7 +45,7 @@ Si el ZIP se descargó pero no se configuró, revisa si contiene un ejecutable D
 - [Flujo del setup, caché y CSV](docs/flujo-setup.md)
 - [Guía para retomar el proyecto](docs/retomar-proyecto.md)
 
-Los binarios descargados, juegos extraídos, ES-DE, DOSBox y logs están excluidos de Git mediante `.gitignore`. Se versionan los scripts, `juegos-extra.csv` y esta documentación. El usuario realiza sus propios commits.
+ES-DE se navega con teclado o mando; la versión usada no ofrece navegación nativa con ratón. Los binarios descargados, juegos extraídos, ES-DE, DOSBox y logs están excluidos de Git mediante `.gitignore`. Se versionan los scripts, `extra_games.csv` y esta documentación. El usuario realiza sus propios commits.
 
 ## Licencias
 

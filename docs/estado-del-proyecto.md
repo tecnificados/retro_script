@@ -1,14 +1,12 @@
 # Estado del proyecto
 
-Última revisión: 10 de noviembre de 2026.
+Última revisión: 11 de noviembre de 2026.
 
 ## Objetivo
 
-Preparar desde Windows una colección portable de juegos DOS usando ES-DE como interfaz y DOSBox Staging como emulador. La instalación debe poder generarse de nuevo ejecutando el setup, registrar sus operaciones y reutilizar las descargas válidas guardadas en caché.
+Preparar desde Windows una colección portable de juegos DOS usando ES-DE como interfaz y DOSBox Staging como emulador. La instalación se genera desde el setup, guarda un registro y reutiliza las descargas válidas de la caché.
 
-## Componentes configurados
-
-El script `setup-retro-portable.ps1` descarga y configura:
+## Catálogo fijo del setup
 
 | Componente o juego | Paquete configurado | Datos de catálogo |
 | --- | --- | --- |
@@ -20,29 +18,33 @@ El script `setup-retro-portable.ps1` descarga y configura:
 | Prince of Persia | Demo jugable | 1990 |
 | Hexxagon | Shareware | 1993 |
 | One Must Fall 2097 | Versión completa seleccionada | 1994; requiere instalación DOS inicial |
-| Jazz Jackrabbit | `juegos-extra.csv`; shareware 1.1 | 1994 |
+| Jazz Jackrabbit | Lista fija `$Downloads`; shareware 1.1 | 1994 |
 
-Los lanzadores incluidos se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento a pantalla completa para reducir las bandas negras en pantallas panorámicas. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la instalación en la ruta predeterminada `C:\OMF`.
+Los lanzadores se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento que llena la pantalla panorámica, con posible deformación de proporciones. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la ruta predeterminada `C:\OMF`.
 
-## Estado de Jazz Jackrabbit
+## Jazz Jackrabbit
 
-La fila activa está en `juegos-extra.csv`:
+Jazz Jackrabbit forma parte de la lista fija `$Downloads` en `setup-retro-portable.ps1` y se instala bajo `Games\JazzJackrabbit`. Su lanzador abre `SETUP.EXE` si no existe `SOUNDCRD.INF`, y después inicia `JAZZ.EXE`.
+
+La ficha de DOS Games Archive identifica `jazz.zip` como Jazz Jackrabbit 1.1, shareware para MS-DOS, año 1994: <https://www.dosgamesarchive.com/download/jazz-jackrabbit/>. En la instalación anterior, el configurador creó `SOUNDCRD.INF`.
+
+## Juegos extra del CSV
+
+`extra_games.csv` usa las columnas `Title;DownloadUrl;Executable;Year`. `Title`, `DownloadUrl` y `Executable` son obligatorios; `Year` es opcional. La fila actual es:
 
 ```csv
-Jazz Jackrabbit;https://image.dosgamesarchive.com/games/jazz.zip;1994
+Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;TET.EXE;1989
 ```
 
-La ficha de DOS Games Archive identifica `jazz.zip` como Jazz Jackrabbit 1.1, shareware para MS-DOS, y muestra el año 1994: <https://www.dosgamesarchive.com/download/jazz-jackrabbit/>.
+El setup aplica la misma lógica a todas las filas: conserva cada ZIP en caché, extrae cada juego en `Games\Extras\<slug>` y genera un `.bat` que monta la raíz del juego y ejecuta lo declarado en `Executable`. El campo admite nombre de archivo o ruta relativa dentro del ZIP, pero no rutas absolutas ni `..`; si el nombre aparece varias veces, hay que indicar la ruta. No se elige un ejecutable automáticamente ni se aplican reglas especiales por título. Este flujo está pensado para juegos que se inicien directamente; no instala paquetes que requieran pasos manuales.
 
-El ZIP ya está descargado en `.setup-cache` y extraído en `Games\Extras\jazz-jackrabbit`; el lanzador aparece en ES-DE. Se comprobó que el paquete contiene `JAZZ.EXE` y `SETUP.EXE`. El configurador genera `SOUNDCRD.INF` (38 bytes en esta instalación), no `CONFIG.000`. El lanzador comprueba ese archivo después del setup y continúa con `JAZZ.EXE`.
-
-La descarga tuvo primero un error DNS en este entorno; un intento posterior funcionó y el paquete quedó en caché. La primera ejecución creó `SOUNDCRD.INF`, pero una comprobación errónea de `CONFIG.000` interrumpió el lanzador antes del juego. El script y el lanzador generado ya comprueban `SOUNDCRD.INF`; falta confirmar el arranque real de Jazz.
+El año se conserva en el nombre y en los metadatos locales de ES-DE. El scraping usa el proveedor que el usuario configure en ES-DE; el setup no presupone MobyGames ni otro servicio. El intento del 11 de noviembre de 2026 no pudo resolver `archive.org` desde este entorno, así que no se confirmó que Tet42 se descargara o aparezca en ES-DE. Se conserva la URL proporcionada; reintentar desde una red que resuelva el dominio.
 
 ## Convenciones de trabajo
 
 - Repositorio de trabajo: `D:\git\retro_script`.
-- Comunicación y documentación del proyecto: español.
-- Mantener UTF-8 para texto y CSV; evitar conversiones que estropeen acentos.
+- Comunicación y documentación del proyecto: español; conservar UTF-8.
 - El usuario hace los commits. No crear commits ni hacer push.
-- Las carpetas de distribución y ejecución están ignoradas por Git; consulta `.gitignore` antes de añadir archivos generados.
-- Al cambiar descargas, catálogo o lanzadores, actualizar este documento y `README.md` si cambia el flujo de usuario.
+- Las carpetas de distribución y ejecución están ignoradas por Git; consultar `.gitignore` antes de añadir archivos generados.
+- `clean.bat` solicita confirmación y borra caché, ES-DE, DOSBox, juegos extraídos, log y lanzador generado. Conserva scripts, documentación, licencia y `extra_games.csv`.
+- Al cambiar descargas, catálogo o lanzadores, actualizar este documento y `README.md` si cambia el flujo para el usuario.

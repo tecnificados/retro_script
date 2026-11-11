@@ -1,35 +1,31 @@
 # Guía para retomar el proyecto
 
-Lee primero `README.md`, `docs/estado-del-proyecto.md` y `docs/flujo-setup.md`. Después revisa los archivos reales del repositorio: las notas de estado no sustituyen la inspección del código ni del log más reciente.
+Lee primero `README.md`, `docs/estado-del-proyecto.md` y `docs/flujo-setup.md`. Después revisa los scripts, el CSV y el último `setup.log`; estas notas no sustituyen el estado real de los archivos.
 
 ## Situación al dejarlo
 
-- El CSV de juegos extra contiene Jazz Jackrabbit, año 1994, en shareware.
-- La URL debe mantenerse exactamente como `https://image.dosgamesarchive.com/games/jazz.zip`.
-- El usuario confirmó que la URL funciona.
-- Hubo un primer error DNS para `image.dosgamesarchive.com`; un intento posterior descargó el ZIP correctamente. La URL funciona y debe conservarse.
-- El ZIP está en caché y el setup generó el lanzador `Jazz Jackrabbit.bat` en ES-DE.
-- El ZIP contiene `JAZZ.EXE` y `SETUP.EXE`. El configurador genera `SOUNDCRD.INF`; no genera `CONFIG.000`.
-- El script y el lanzador generado usan `SOUNDCRD.INF` como señal para saltar el configurador y arrancar `JAZZ.EXE`.
-- Pendiente: confirmar el arranque real de Jazz desde ES-DE.
-- Beneath a Steel Sky fue retirado a petición del usuario. No reintroducirlo ni añadir montaje de imágenes de CD para ese caso.
-- Los juegos base anteriores siguen definidos dentro del setup.
-- Extreme Pinball usa `Games\ExtremePinball\dosbox-video.conf` para estirar la imagen hasta el área completa de la pantalla; las proporciones pueden deformarse. El setup genera este archivo y su lanzador lo carga con `--conf`.
-- Break Machine ahora usa el ZIP de Internet Archive definido en `setup-retro-portable.ps1` y una clave nueva de caché (`break-machine-freeware-v14-archive-org.zip`), para no reutilizar la descarga de la fuente anterior.
+- Jazz Jackrabbit está en la lista fija `$Downloads` de `setup-retro-portable.ps1`, con la fuente de DOS Games Archive. El lanzador de Jazz configura el sonido con `SETUP.EXE` la primera vez, detectando `SOUNDCRD.INF`, y luego ejecuta `JAZZ.EXE`.
+- Los juegos extra se declaran en `extra_games.csv`, con el esquema `Title;DownloadUrl;Executable;Year`. Las tres primeras columnas son obligatorias; el año es opcional. Todas las filas usan el mismo flujo, sin reglas especiales por título: extracción en carpeta propia y `.bat` que ejecuta el archivo o ruta relativa declarada.
+- `Executable` puede ser un nombre o una ruta relativa dentro del ZIP. Si el nombre aparece más de una vez, indicar la ruta; no se permiten rutas absolutas ni `..`. El lanzador monta la raíz extraída del juego, conservando el acceso a sus subcarpetas y archivos auxiliares.
+- El flujo genérico espera un ejecutable DOS que se inicie directamente. No ejecuta automáticamente instaladores ni configura argumentos o pasos iniciales.
+- El año se guarda en los metadatos locales de ES-DE. El proveedor de scraping es el que el usuario configure en ES-DE; no asumir que MobyGames está disponible.
+- Tet42 está en el CSV con la URL proporcionada de Archive.org, ejecutable `TET.EXE` y año 1989. El setup se intentó el 11-11-2026, pero falló al resolver `archive.org`; el ZIP aún no está en caché ni instalado. Conservar la URL y reintentar con DNS/red funcionales.
+- Beneath a Steel Sky fue retirado por petición del usuario. No reintroducirlo ni añadir montaje de imágenes de CD para ese caso.
+- Extreme Pinball usa `Games\ExtremePinball\dosbox-video.conf` para estirar la imagen a la pantalla; esto puede deformar las proporciones.
+- Break Machine usa el ZIP de Internet Archive y la caché `break-machine-freeware-v14-archive-org.zip`.
+- `clean.bat` conserva scripts, documentación, licencia y CSV; borra la instalación y caché tras pedir confirmación.
+- El usuario realiza los commits. No hacer commits ni push.
 
-## Próximo paso útil
+## Próximos pasos
 
-Para regenerar la instalación o el lanzador, ejecutar `setup-retro-portable.bat` y revisar `setup.log`. Para cerrar el pendiente de Jazz:
+1. Ejecutar `setup-retro-portable.bat` y revisar `setup.log`.
+2. Confirmar que Tet42 se extrae con `Games\Extras\tet42\TET.EXE`, y que su `.bat` ejecuta `TET.EXE` y la entrada de `gamelist.xml` contiene el año 1989.
+3. Probar Tet42 desde ES-DE. Si falla, revisar su log de lanzamiento y adaptar el lanzador al contenido real del ZIP.
+4. Si se cambia el proceso, actualizar `README.md` y esta guía.
 
-1. Confirmar que existe `Games\Extras\jazz-jackrabbit\SOUNDCRD.INF`.
-2. Lanzar Jazz Jackrabbit desde ES-DE: debe saltar el configurador y abrir `JAZZ.EXE`.
-3. Si falla, revisar `ES-DE\ES-DE\ROMs\windows\Jazz Jackrabbit launch.log`, corregir el launcher y actualizar este estado.
-
-## Instrucciones de colaboración
+## Convenciones
 
 - Trabajar dentro de `D:\git\retro_script`.
-- Responder al usuario en español y preservar correctamente acentos y caracteres especiales.
-- No crear commits ni subir cambios: el usuario se encarga de los commits.
-- No reemplazar enlaces proporcionados por el usuario sin una razón comprobada.
-- Comunicar los bloqueos de DNS como problemas del entorno donde se ejecutó, salvo evidencia adicional.
-- No decir que el juego está instalado o funciona hasta haber verificado el resultado real.
+- Responder en español y conservar caracteres UTF-8.
+- No cambiar URLs proporcionadas por el usuario sin razón verificada.
+- No afirmar que un juego está instalado o funciona antes de comprobarlo.

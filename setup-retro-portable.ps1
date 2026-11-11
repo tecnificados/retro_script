@@ -20,7 +20,8 @@ $Downloads = @(
     [pscustomobject]@{ Name='DOOM shareware'; Url='https://dosgames.com/files/DOSBOX_DOOM.ZIP'; Archive='doom-shareware-dosbox.zip' },
     [pscustomobject]@{ Name='Prince of Persia playable demo'; Url='https://dosgames.com/files/pop1.zip'; Archive='prince-of-persia-playable-demo.zip' },
     [pscustomobject]@{ Name='Hexxagon shareware'; Url='https://dosgames.com/files/hexx.zip'; Archive='hexxagon-shareware.zip' },
-    [pscustomobject]@{ Name='One Must Fall 2097 full version'; Url='https://dosgames.com/files/omf2097.zip'; Archive='one-must-fall-2097-full.zip' }
+    [pscustomobject]@{ Name='One Must Fall 2097 full version'; Url='https://dosgames.com/files/omf2097.zip'; Archive='one-must-fall-2097-full.zip' },
+    [pscustomobject]@{ Name='Jazz Jackrabbit shareware v1.1'; Url='https://image.dosgamesarchive.com/games/jazz.zip'; Archive='jazz-jackrabbit-shareware-v11.zip' }
 )
 
 function Write-Log([string]$Message, [string]$Level='INFO') {
@@ -87,14 +88,17 @@ try {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     New-Item -ItemType Directory -Path $Cache -Force | Out-Null
     Write-Log 'Inicio de configuración.'
-    $extraGamesFile = Join-Path $Root 'juegos-extra.csv'
+    $extraGamesFile = Join-Path $Root 'extra_games.csv'
     $extraGames = @()
     if (Test-Path -LiteralPath $extraGamesFile) {
         $extraGames = @(Import-Csv -LiteralPath $extraGamesFile -Delimiter ';' -Encoding UTF8 | Where-Object { $_.Title -or $_.DownloadUrl })
     }
+    if ($extraGames.Count -gt 0 -and $extraGames[0].PSObject.Properties.Name -notcontains 'Executable') {
+        throw "Falta la columna Executable en $extraGamesFile. Usa el encabezado Title;DownloadUrl;Executable;Year."
+    }
     foreach ($extraGame in $extraGames) {
-        if ([string]::IsNullOrWhiteSpace($extraGame.Title) -or [string]::IsNullOrWhiteSpace($extraGame.DownloadUrl)) {
-            throw "Cada fila de $extraGamesFile debe tener Title y DownloadUrl."
+        if ([string]::IsNullOrWhiteSpace($extraGame.Title) -or [string]::IsNullOrWhiteSpace($extraGame.DownloadUrl) -or [string]::IsNullOrWhiteSpace($extraGame.Executable)) {
+            throw "Cada fila de $extraGamesFile debe tener Title, DownloadUrl y Executable. Year es opcional."
         }
     }
     $esdeZip = Get-Archive $Downloads[0].Name $Downloads[0].Url $Downloads[0].Archive
@@ -105,6 +109,13 @@ try {
     $popZip = Get-Archive $Downloads[5].Name $Downloads[5].Url $Downloads[5].Archive
     $hexxZip = Get-Archive $Downloads[6].Name $Downloads[6].Url $Downloads[6].Archive
     $omfZip = Get-Archive $Downloads[7].Name $Downloads[7].Url $Downloads[7].Archive
+    $oldJazzCache = Join-Path $Cache 'extra-jazz-jackrabbit.zip'
+    $newJazzCache = Join-Path $Cache $Downloads[8].Archive
+    if (-not (Test-Path -LiteralPath $newJazzCache) -and (Test-Path -LiteralPath $oldJazzCache)) {
+        Move-Item -LiteralPath $oldJazzCache -Destination $newJazzCache
+        Write-Log 'Caché anterior de Jazz Jackrabbit renombrada para reflejar que ahora es un juego de la lista fija.'
+    }
+    $jazzZip = Get-Archive $Downloads[8].Name $Downloads[8].Url $Downloads[8].Archive
     $extraGamePackages = @()
     foreach ($extraGame in $extraGames) {
         $extraSlug = ConvertTo-SafeSlug $extraGame.Title
@@ -112,7 +123,7 @@ try {
         $extraArchive = Get-Archive "Juego adicional: $($extraGame.Title)" $extraGame.DownloadUrl $extraArchiveName
         $extraGameDir = Join-Path $Root "Games\Extras\$extraSlug"
         Expand-Once $extraArchive $extraGameDir '.ready-extra'
-        $extraGamePackages += [pscustomobject]@{ Title=$extraGame.Title.Trim(); Slug=$extraSlug; Year=([string]$extraGame.Year).Trim(); Directory=$extraGameDir }
+        $extraGamePackages += [pscustomobject]@{ Title=$extraGame.Title.Trim(); Slug=$extraSlug; Executable=$extraGame.Executable.Trim(); Year=([string]$extraGame.Year).Trim(); Directory=$extraGameDir }
     }
 
     $esdeDir = Join-Path $Root 'ES-DE'
@@ -134,12 +145,32 @@ try {
     Expand-Once $hexxZip $hexxDir '.ready-shareware'
     $omfDir = Join-Path $Root 'Games\OneMustFall2097'
     Expand-Once $omfZip $omfDir '.ready-full-version'
+    $jazzDir = Join-Path $Root 'Games\JazzJackrabbit'
+    Expand-Once $jazzZip $jazzDir '.ready-shareware-v11'
+    $jazzProgram = Get-ChildItem -LiteralPath $jazzDir -Filter 'JAZZ.EXE' -File -Recurse | Select-Object -First 1
+    $jazzSetupProgram = Get-ChildItem -LiteralPath $jazzDir -Filter 'SETUP.EXE' -File -Recurse | Select-Object -First 1
+    if (-not $jazzProgram -or -not $jazzSetupProgram) { throw 'El ZIP de Jazz Jackrabbit debe incluir JAZZ.EXE y SETUP.EXE.' }
+    Write-Log 'Jazz Jackrabbit v1.1 extraído como juego de la lista fija del setup.'
     foreach ($extraGame in $extraGamePackages) {
-        $candidates = @(Get-ChildItem -LiteralPath $extraGame.Directory -File -Recurse | Where-Object {
-            $_.Extension -match '^\.(EXE|COM|BAT)$' -and $_.BaseName -notmatch '^(INSTALL|SETUP|UNINSTALL|UNINST|CONFIG|CONFIGURE|PATCH|README|HELP|REGISTER|ORDER)([-_.].*)?$'
-        })
-        $program = $candidates | Sort-Object @{ Expression = { if ($_.BaseName -match '^(SKY|GAME|PLAY|START)$') { 0 } else { 1 } } }, @{ Expression = { -$_.Length } } | Select-Object -First 1
-        if (-not $program) { throw "No se encontró un ejecutable de juego (EXE, COM o BAT) para '$($extraGame.Title)' en su ZIP." }
+        $declaredExecutable = ([string]$extraGame.Executable).Trim()
+        if ([string]::IsNullOrWhiteSpace($declaredExecutable)) { throw "La fila de '$($extraGame.Title)' no indica el ejecutable. Añade la columna Executable a $extraGamesFile." }
+        $declaredExecutable = $declaredExecutable.Replace('/', '\')
+        if ([System.IO.Path]::IsPathRooted($declaredExecutable) -or $declaredExecutable -match '(^|\\)\.\.(\\|$)') {
+            throw "Executable debe ser un nombre o una ruta relativa dentro del juego: '$declaredExecutable' para '$($extraGame.Title)'."
+        }
+        $program = $null
+        if ($declaredExecutable.Contains('\')) {
+            $candidatePath = Join-Path $extraGame.Directory $declaredExecutable
+            $program = Get-Item -LiteralPath $candidatePath -ErrorAction SilentlyContinue
+            if ($program -and $program.PSIsContainer) { $program = $null }
+        } else {
+            $programMatches = @(Get-ChildItem -LiteralPath $extraGame.Directory -Filter $declaredExecutable -File -Recurse)
+            if ($programMatches.Count -gt 1) {
+                throw "Hay varios archivos llamados '$declaredExecutable' en '$($extraGame.Title)'. Indica en Executable la ruta relativa completa dentro del ZIP."
+            }
+            if ($programMatches.Count -eq 1) { $program = $programMatches[0] }
+        }
+        if (-not $program) { throw "No se encontró el ejecutable indicado '$declaredExecutable' para '$($extraGame.Title)' en su ZIP." }
         $extraGame | Add-Member -NotePropertyName Program -NotePropertyValue $program -Force
         Write-Log "Ejecutable detectado para '$($extraGame.Title)': $($program.Name)"
     }
@@ -242,6 +273,37 @@ try {
         'exit /b %DOSBOX_EXIT%'
     ) | Set-Content -LiteralPath $doomLauncher -Encoding ASCII
 
+    $jazzLauncher = Join-Path $romDir 'Jazz Jackrabbit (1994) (Shareware).bat'
+    $jazzGameRelative = Get-RelativePath $romDir $jazzProgram.DirectoryName
+    @(
+        '@echo off',
+        'setlocal',
+        'set "LOG=%~dp0Jazz Jackrabbit launch.log"',
+        'echo [%date% %time%] Starting Jazz Jackrabbit shareware > "%LOG%"',
+        ('set "DOSBOX=%~dp0{0}"' -f $dosboxRelative),
+        ('set "GAMEDIR=%~dp0{0}"' -f $jazzGameRelative),
+        'if not exist "%DOSBOX%" (echo ERROR: DOSBox not found: "%DOSBOX%" >> "%LOG%" & exit /b 10)',
+        'if not exist "%GAMEDIR%\JAZZ.EXE" (echo ERROR: JAZZ.EXE not found in "%GAMEDIR%" >> "%LOG%" & exit /b 11)',
+        'if not exist "%GAMEDIR%\SOUNDCRD.INF" (',
+        '  echo First run: configure and save the Jazz Jackrabbit sound settings.',
+        '  echo Configuring Jazz Jackrabbit > "%LOG%"',
+        '  pushd "%GAMEDIR%"',
+        '  "%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "SETUP.EXE" >> "%LOG%" 2>&1',
+        '  set "SETUP_EXIT=%ERRORLEVEL%"',
+        '  popd',
+        '  if not exist "%GAMEDIR%\SOUNDCRD.INF" (echo ERROR: SETUP.EXE did not create SOUNDCRD.INF. Save the sound settings and exit setup. >> "%LOG%" & exit /b 12)',
+        '  echo Jazz Jackrabbit sound configuration saved. >> "%LOG%"',
+        ')',
+        'echo DOSBox: "%DOSBOX%" >> "%LOG%"',
+        'echo Game folder: "%GAMEDIR%" >> "%LOG%"',
+        'pushd "%GAMEDIR%"',
+        '"%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "JAZZ.EXE" >> "%LOG%" 2>&1',
+        'set "DOSBOX_EXIT=%ERRORLEVEL%"',
+        'popd',
+        'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
+        'exit /b %DOSBOX_EXIT%'
+    ) | Set-Content -LiteralPath $jazzLauncher -Encoding ASCII
+
     $popLauncher = Join-Path $romDir 'Prince of Persia (1990) (Demo).bat'
     $popGameDirectory = if ($popProgram) { $popProgram.DirectoryName } else { $popBootstrap.DirectoryName }
     $popGameRelative = Get-RelativePath $romDir $popGameDirectory
@@ -319,9 +381,12 @@ try {
         $safeTitle = $extraGame.Title -replace '[<>:"/\\|?*]', '_'
         $extraLauncherName = "$safeTitle.bat"
         $extraLauncher = Join-Path $romDir $extraLauncherName
-        $extraGameRelative = Get-RelativePath $romDir $extraGame.Program.DirectoryName
-        $gameCheck = ('if not exist "%GAMEDIR%\{0}" (echo ERROR: Game executable not found in "%GAMEDIR%" >> "%LOG%" & exit /b 11)' -f $extraGame.Program.Name)
-        $gameCommand = ('"%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "{0}" >> "%LOG%" 2>&1' -f $extraGame.Program.Name)
+        $extraGameRelative = Get-RelativePath $romDir $extraGame.Directory
+        $extraExecutableRelative = Get-RelativePath $extraGame.Directory $extraGame.Program.FullName
+        # The archive is unpacked under Games\Extras\<slug>; launch exactly the
+        # executable declared in extra_games.csv, preserving the ZIP's directory structure.
+        $gameCheck = ('if not exist "%GAMEDIR%\{0}" (echo ERROR: Executable {0} from extra_games.csv not found in "%GAMEDIR%" >> "%LOG%" & exit /b 11)' -f $extraExecutableRelative)
+        $gameCommand = ('"%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "{0}" >> "%LOG%" 2>&1' -f $extraExecutableRelative)
         $extraLogName = "$safeTitle launch.log"
         $extraLauncherLines = @(
             '@echo off',
@@ -330,24 +395,9 @@ try {
             ('echo [%date% %time%] Starting {0} > "%LOG%"' -f $extraGame.Title),
             ('set "DOSBOX=%~dp0{0}"' -f $dosboxRelative),
             ('set "GAMEDIR=%~dp0{0}"' -f $extraGameRelative),
+            ('echo CSV executable: {0} >> "%LOG%"' -f $extraExecutableRelative),
             'if not exist "%DOSBOX%" (echo ERROR: DOSBox not found: "%DOSBOX%" >> "%LOG%" & exit /b 10)'
         )
-        if ($extraGame.Slug -eq 'jazz-jackrabbit') {
-            $setupProgram = Get-ChildItem -LiteralPath $extraGame.Directory -Filter 'SETUP.EXE' -File -Recurse | Select-Object -First 1
-            if (-not $setupProgram) { throw "No se encontró SETUP.EXE para preparar Jazz Jackrabbit." }
-            $extraLauncherLines += @(
-                'if not exist "%GAMEDIR%\SOUNDCRD.INF" (',
-                '  echo Primera ejecucion: configura el sonido de Jazz Jackrabbit y guarda los cambios.',
-                '  echo Configurando Jazz Jackrabbit > "%LOG%"',
-                '  pushd "%GAMEDIR%"',
-                '  "%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "SETUP.EXE" >> "%LOG%" 2>&1',
-                '  set "SETUP_EXIT=%ERRORLEVEL%"',
-                '  popd',
-                '  if not exist "%GAMEDIR%\SOUNDCRD.INF" (echo ERROR: Jazz SETUP.EXE no genero SOUNDCRD.INF. Guarda la configuracion antes de salir. >> "%LOG%" & exit /b 12)',
-                '  echo Configuracion de Jazz Jackrabbit guardada. >> "%LOG%"',
-                ')'
-            )
-        }
         $extraLauncherLines += @(
             $gameCheck,
             'echo DOSBox: "%DOSBOX%" >> "%LOG%"',
@@ -367,6 +417,7 @@ try {
     $gameYearMetadata = @(
         [pscustomobject]@{ Old='Break Machine.bat'; File='Break Machine (1995).bat'; Name='Break Machine (1995)'; Date='19950101T000000' },
         [pscustomobject]@{ Old='Extreme Pinball.bat'; File='Extreme Pinball (1995).bat'; Name='Extreme Pinball (1995)'; Date='19950101T000000' },
+        [pscustomobject]@{ Old='Jazz Jackrabbit.bat'; File='Jazz Jackrabbit (1994) (Shareware).bat'; Name='Jazz Jackrabbit (1994) (Shareware)'; Date='19940101T000000' },
         [pscustomobject]@{ Old='DOOM (Shareware).bat'; File='DOOM (1993) (Shareware).bat'; Name='DOOM (1993) (Shareware)'; Date='19931210T000000' },
         [pscustomobject]@{ Old='Prince of Persia (Demo).bat'; File='Prince of Persia (1990) (Demo).bat'; Name='Prince of Persia (1990) (Demo)'; Date='19900101T000000' },
         [pscustomobject]@{ Old='Hexxagon.bat'; File='Hexxagon (1993).bat'; Name='Hexxagon (1993)'; Date='19930101T000000' },
@@ -413,7 +464,7 @@ try {
 
     $shortcut = Join-Path $Root 'run-retro-portable.bat'
     @('@echo off', ('start "" "{0}" --debug' -f $esdeExe.FullName)) | Set-Content -LiteralPath $shortcut -Encoding ASCII
-    Write-Log 'Configuración terminada. ES-DE mostrará los juegos configurados; los años indicados se incluirán en el nombre y los metadatos para facilitar el scraper.'
+    Write-Log 'Configuración terminada. ES-DE mostrará los juegos configurados; el año se añadió al nombre y a los metadatos locales cuando se indicó en el CSV.'
     Write-Log ("Juegos adicionales del CSV configurados: {0}" -f $extraGamePackages.Count)
     Write-Log 'One Must Fall 2097 ejecutará su instalador DOS una sola vez al abrirse por primera vez; utiliza la ruta predeterminada C:\OMF.'
     Write-Log "Inicia ES-DE en modo de depuración desde: $shortcut"
@@ -422,7 +473,9 @@ try {
     Write-Host "Registro: $Log`nCaché reutilizable: $Cache"
 }
 catch {
-    Write-Log $_.Exception.Message 'ERROR'
+    $errorDetail = $_.Exception.Message
+    if ($_.InvocationInfo.ScriptLineNumber) { $errorDetail += " (línea $($_.InvocationInfo.ScriptLineNumber): $($_.InvocationInfo.Line.Trim()))" }
+    Write-Log $errorDetail 'ERROR'
     Write-Host "`nLa configuración no se completó. Vuelve a ejecutar el script: reutilizará los ZIP correctos de $Cache.`nRegistro: $Log" -ForegroundColor Red
     exit 1
 }
