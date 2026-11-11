@@ -17,7 +17,7 @@ Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzl
 
 `Get-Archive` guarda los ZIP en `.setup-cache`. Antes de descargar, comprueba que un archivo existente se pueda abrir como ZIP. Las descargas nuevas usan un sufijo `.part`, que solo se promueve a ZIP definitivo después de validar su estructura. Si algo falla, el error queda en `setup.log`.
 
-Los paquetes base usan nombres estables declarados en `$Downloads`; Jazz Jackrabbit forma parte de esa lista fija. Los juegos del CSV usan `extra-<slug>.zip`. Una repetición del setup reutiliza ZIP válidos, y `Expand-Once` evita extraer otra vez las carpetas con su marcador `.ready`.
+Los paquetes base usan nombres estables declarados en `$Downloads`; Jazz Jackrabbit y The Lost Vikings (demo) forman parte de esa lista fija. La lista inicial completa y el tipo de versión de cada juego están en la sección «Juegos incluidos inicialmente» del README y en el catálogo de `estado-del-proyecto.md`. Los juegos del CSV usan `extra-<slug>.zip`. Una repetición del setup reutiliza ZIP válidos, y `Expand-Once` evita extraer otra vez las carpetas con su marcador `.ready`.
 
 ES-DE y DOSBox son requisitos del setup. Cada descarga de juego se intenta de forma independiente; si un ZIP no está disponible o no puede extraerse, el setup registra un aviso y continúa con el siguiente paquete. También omite solo ese juego si no localiza su ejecutable, sin crearle un lanzador ni una entrada de gamelist. Las filas extra del CSV tienen el mismo comportamiento independiente.
 

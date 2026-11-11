@@ -11,6 +11,23 @@ Este repositorio prepara una instalación portable de **ES-DE** y **DOSBox Stagi
 
 Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan. Para borrar la caché y la instalación descargada o extraída y empezar de cero, ejecuta `clean.bat`; conserva los scripts, la documentación, `extra_games.csv` y `metadata_sources.csv`.
 
+## Juegos incluidos inicialmente
+
+El setup ofrece estos juegos fijos; los paquetes de juego se omiten individualmente si no se pueden descargar o no contienen un ejecutable reconocido:
+
+| Juego | Tipo de versión | Año |
+| --- | --- | --- |
+| Break Machine | Shareware; el paquete configurado es la edición freeware v1.4 | 1995 |
+| Extreme Pinball | Demo | 1995 |
+| DOOM | Shareware | 1993 |
+| Prince of Persia | Demo jugable | 1990 |
+| Hexxagon | Shareware | 1993 |
+| One Must Fall 2097 | Freeware, versión completa | 1994 |
+| Jazz Jackrabbit | Shareware 1.1 | 1994 |
+| The Lost Vikings | Demo | 1993 |
+
+Las categorías describen el paquete incluido o su distribución; no reemplazan los términos de licencia de sus titulares.
+
 ## Añadir juegos
 
 Los juegos adicionales se declaran en [`extra_games.csv`](extra_games.csv), en UTF-8 y separado por punto y coma. El encabezado es:

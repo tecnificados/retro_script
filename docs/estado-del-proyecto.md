@@ -12,13 +12,14 @@ Preparar desde Windows una colección portable de juegos DOS usando ES-DE como i
 | --- | --- | --- |
 | ES-DE | Portable 3.5.0 | Interfaz y gamelist de Windows |
 | DOSBox Staging | 0.83.0 | Emulador DOS |
-| Break Machine | Freeware v1.4 ([ZIP en Internet Archive](https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip)) | 1995 |
+| Break Machine | Shareware; paquete configurado: edición freeware v1.4 ([ZIP en Internet Archive](https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip)) | 1995 |
 | Extreme Pinball | Demo | 1995 |
 | DOOM | Shareware | 1993 |
 | Prince of Persia | Demo jugable | 1990 |
 | Hexxagon | Shareware | 1993 |
-| One Must Fall 2097 | Versión completa seleccionada | 1994; requiere instalación DOS inicial |
-| Jazz Jackrabbit | Lista fija `$Downloads`; shareware 1.1 | 1994 |
+| One Must Fall 2097 | Freeware, versión completa | 1994; requiere instalación DOS inicial |
+| Jazz Jackrabbit | Shareware 1.1 | 1994 |
+| The Lost Vikings | Demo | 1993 |
 
 Los lanzadores se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento que llena la pantalla panorámica, con posible deformación de proporciones. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la ruta predeterminada `C:\OMF`.
 
