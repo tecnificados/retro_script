@@ -8,20 +8,22 @@ Preparar desde Windows una colección portable de juegos DOS usando ES-DE como i
 
 ## Catálogo fijo del setup
 
-| Componente o juego | Paquete configurado | Datos de catálogo |
-| --- | --- | --- |
-| ES-DE | Portable 3.5.0 | Interfaz y gamelist de Windows |
-| DOSBox Staging | 0.83.0 | Emulador DOS |
-| Break Machine | Shareware; paquete configurado: edición freeware v1.4 ([ZIP en Internet Archive](https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip)) | 1995 |
-| Extreme Pinball | Demo | 1995 |
-| DOOM | Shareware | 1993 |
-| Prince of Persia | Demo jugable | 1990 |
-| Hexxagon | Shareware | 1993 |
-| One Must Fall 2097 | Freeware, versión completa | 1994; requiere instalación DOS inicial |
-| Jazz Jackrabbit | Shareware 1.1 | 1994 |
-| The Lost Vikings | Demo | 1993 |
+| Componente o juego | Paquete configurado | Datos de catálogo | Portal de descarga |
+| --- | --- | --- | --- |
+| ES-DE | Portable 3.5.0 | Interfaz y gamelist de Windows | [ES-DE](https://packages.es-de.org/) |
+| DOSBox Staging | 0.83.0 | Emulador DOS | [GitHub Releases](https://github.com/dosbox-staging/dosbox-staging/releases) |
+| Break Machine | Shareware; paquete configurado: edición freeware v1.4 | 1995 | [Internet Archive](https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip) |
+| Extreme Pinball | Demo | 1995 | [DOSGames.com](https://dosgames.com/files/DOSBOX_EXTREMEPINBALL.ZIP) |
+| DOOM | Shareware | 1993 | [DOSGames.com](https://dosgames.com/files/DOSBOX_DOOM.ZIP) |
+| Prince of Persia | Demo jugable | 1990 | [DOSGames.com](https://dosgames.com/files/pop1.zip) |
+| Hexxagon | Shareware | 1993 | [DOSGames.com](https://dosgames.com/files/hexx.zip) |
+| One Must Fall 2097 | Freeware, versión completa | 1994; requiere instalación DOS inicial | [DOSGames.com](https://dosgames.com/files/omf2097.zip) |
+| Jazz Jackrabbit | Shareware 1.1 | 1994 | [DOS Games Archive](https://image.dosgamesarchive.com/games/jazz.zip) |
+| The Lost Vikings | Demo | 1993 | [DOSGames.com](https://dosgames.com/files/vikings.zip) |
 
 Los lanzadores se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento que llena la pantalla panorámica, con posible deformación de proporciones. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la ruta predeterminada `C:\OMF`.
+
+Los portales enlazados son las fuentes de descarga configuradas actualmente. Las categorías identifican la edición incluida y no sustituyen los términos de los titulares. Si un titular o representante comunica una irregularidad, se retirará cuanto antes del proyecto y de las descargas el material afectado.
 
 ## Jazz Jackrabbit
 

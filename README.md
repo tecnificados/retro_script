@@ -15,18 +15,18 @@ Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP 
 
 El setup ofrece estos juegos fijos; los paquetes de juego se omiten individualmente si no se pueden descargar o no contienen un ejecutable reconocido:
 
-| Juego | Tipo de versión | Año |
-| --- | --- | --- |
-| Break Machine | Shareware; el paquete configurado es la edición freeware v1.4 | 1995 |
-| Extreme Pinball | Demo | 1995 |
-| DOOM | Shareware | 1993 |
-| Prince of Persia | Demo jugable | 1990 |
-| Hexxagon | Shareware | 1993 |
-| One Must Fall 2097 | Freeware, versión completa | 1994 |
-| Jazz Jackrabbit | Shareware 1.1 | 1994 |
-| The Lost Vikings | Demo | 1993 |
+| Juego | Tipo de versión | Año | Portal de descarga |
+| --- | --- | --- | --- |
+| Break Machine | Shareware; el paquete configurado es la edición freeware v1.4 | 1995 | [Internet Archive](https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip) |
+| Extreme Pinball | Demo | 1995 | [DOSGames.com](https://dosgames.com/files/DOSBOX_EXTREMEPINBALL.ZIP) |
+| DOOM | Shareware | 1993 | [DOSGames.com](https://dosgames.com/files/DOSBOX_DOOM.ZIP) |
+| Prince of Persia | Demo jugable | 1990 | [DOSGames.com](https://dosgames.com/files/pop1.zip) |
+| Hexxagon | Shareware | 1993 | [DOSGames.com](https://dosgames.com/files/hexx.zip) |
+| One Must Fall 2097 | Freeware, versión completa | 1994 | [DOSGames.com](https://dosgames.com/files/omf2097.zip) |
+| Jazz Jackrabbit | Shareware 1.1 | 1994 | [DOS Games Archive](https://image.dosgamesarchive.com/games/jazz.zip) |
+| The Lost Vikings | Demo | 1993 | [DOSGames.com](https://dosgames.com/files/vikings.zip) |
 
-Las categorías describen el paquete incluido o su distribución; no reemplazan los términos de licencia de sus titulares.
+Las categorías describen el paquete incluido o su distribución; no reemplazan los términos de licencia de sus titulares. Si algún titular o representante se pone en contacto conmigo para señalar una irregularidad, retiraré cuanto antes el material afectado del proyecto y de sus descargas.
 
 ## Añadir juegos
 
@@ -69,7 +69,7 @@ ES-DE se navega con teclado o mando; la versión usada no ofrece navegación nat
 
 ## Licencias
 
-El setup descarga componentes y juegos de terceros. Las etiquetas freeware, demo y shareware identifican el tipo de paquete que se seleccionó; no sustituyen la licencia de cada titular. Consulta `LICENSE` para la licencia del contenido propio del repositorio y verifica los términos de cada descarga antes de redistribuirla.
+El setup descarga componentes y juegos de terceros desde los portales enlazados en el catálogo. Las etiquetas freeware, demo y shareware identifican el tipo de paquete que se seleccionó; no sustituyen la licencia de cada titular. Si algún titular o representante se pone en contacto conmigo para señalar una irregularidad, retiraré cuanto antes el material afectado del proyecto y de sus descargas. Consulta `LICENSE` para la licencia del contenido propio del repositorio y verifica los términos de cada descarga antes de redistribuirla.
 
 ## Autoría
 
