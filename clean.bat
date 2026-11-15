@@ -10,7 +10,7 @@ if not exist "%ROOT%setup-retro-portable.ps1" (
 
 echo This will remove the downloaded cache and generated portable installation:
 echo   .setup-cache, Emulators, ES-DE, Games, ES-DE.incomplete
-echo   run-retro-portable.bat and setup.log
+echo   run.bat, any old run-retro-portable.bat and setup.log
 echo Source scripts, documentation, LICENSE, extra_games.csv and metadata_sources.csv will be kept.
 choice /C SN /N /M "Continue? [S/N]: "
 if errorlevel 2 goto cancelled
@@ -20,6 +20,7 @@ if exist "%ROOT%Emulators" rmdir /s /q "%ROOT%Emulators"
 if exist "%ROOT%ES-DE" rmdir /s /q "%ROOT%ES-DE"
 if exist "%ROOT%ES-DE.incomplete" rmdir /s /q "%ROOT%ES-DE.incomplete"
 if exist "%ROOT%Games" rmdir /s /q "%ROOT%Games"
+if exist "%ROOT%run.bat" del /q "%ROOT%run.bat"
 if exist "%ROOT%run-retro-portable.bat" del /q "%ROOT%run-retro-portable.bat"
 if exist "%ROOT%setup.log" del /q "%ROOT%setup.log"
 

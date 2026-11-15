@@ -20,6 +20,7 @@ Preparar desde Windows una colección portable de juegos DOS usando ES-DE como i
 | One Must Fall 2097 | Freeware, versión completa | 1994; requiere instalación DOS inicial | [DOSGames.com](https://dosgames.com/files/omf2097.zip) |
 | Jazz Jackrabbit | Shareware 1.1 | 1994 | [DOS Games Archive](https://image.dosgamesarchive.com/games/jazz.zip) |
 | The Lost Vikings | Demo | 1993 | [DOSGames.com](https://dosgames.com/files/vikings.zip) |
+| Worms Reinforcements | Demo | 1995 | [Internet Archive](https://archive.org/download/worms_202611/WORMS.zip) |
 
 Los lanzadores se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento que llena la pantalla panorámica, con posible deformación de proporciones. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la ruta predeterminada `C:\OMF`.
 

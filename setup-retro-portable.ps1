@@ -22,7 +22,8 @@ $Downloads = @(
     [pscustomobject]@{ Name='Hexxagon shareware'; Url='https://dosgames.com/files/hexx.zip'; Archive='hexxagon-shareware.zip' },
     [pscustomobject]@{ Name='One Must Fall 2097 full version'; Url='https://dosgames.com/files/omf2097.zip'; Archive='one-must-fall-2097-full.zip' },
     [pscustomobject]@{ Name='Jazz Jackrabbit shareware v1.1'; Url='https://image.dosgamesarchive.com/games/jazz.zip'; Archive='jazz-jackrabbit-shareware-v11.zip' },
-    [pscustomobject]@{ Name='The Lost Vikings demo'; Url='https://dosgames.com/files/vikings.zip'; Archive='the-lost-vikings-demo.zip' }
+    [pscustomobject]@{ Name='The Lost Vikings demo'; Url='https://dosgames.com/files/vikings.zip'; Archive='the-lost-vikings-demo.zip' },
+    [pscustomobject]@{ Name='Worms Reinforcements demo'; Url='https://archive.org/download/worms_202611/WORMS.zip'; Archive='worms-reinforcements-demo.zip' }
 )
 
 function Write-Log([string]$Message, [string]$Level='INFO') {
@@ -180,6 +181,7 @@ try {
     $omfZip = $optionalGameZips[$Downloads[7].Archive]
     $jazzZip = $optionalGameZips[$Downloads[8].Archive]
     $vikingsZip = $optionalGameZips[$Downloads[9].Archive]
+    $wormsZip = $optionalGameZips[$Downloads[10].Archive]
     $extraGamePackages = @()
     foreach ($extraGame in $extraGames) {
         try {
@@ -221,6 +223,8 @@ try {
     else { Write-Log 'Se omite Jazz Jackrabbit: el paquete no contiene JAZZ.EXE y SETUP.EXE.' 'WARN' }
     $vikingsDir = Join-Path $Root 'Games\LostVikingsDemo'
     $null = Expand-OptionalGame $vikingsZip $vikingsDir '.ready-demo' 'The Lost Vikings demo'
+    $wormsDir = Join-Path $Root 'Games\WormsReinforcementsDemo'
+    $null = Expand-OptionalGame $wormsZip $wormsDir '.ready-demo' 'Worms Reinforcements demo'
     foreach ($extraGame in $extraGamePackages) {
         try {
             $declaredExecutable = ([string]$extraGame.Executable).Trim()
@@ -267,6 +271,10 @@ try {
     if (-not $omfInstaller) { Write-Log 'Se omite One Must Fall 2097: no se encontró INSTALL.EXE.' 'WARN' }
     $vikingsProgram = Find-GameFile $vikingsDir @('VIKING.EXE', 'VIKINGS.EXE', 'LOSTVIK.EXE', '*.EXE', '*.BAT')
     if (-not $vikingsProgram) { Write-Log 'Se omite The Lost Vikings demo: no se encontró un ejecutable en el paquete.' 'WARN' }
+    # Launch the game binary directly to avoid WORMS.BAT's interactive PAUSE;
+    # DOS4GW.EXE is only the DOS extender.
+    $wormsProgram = Find-GameFile $wormsDir @('WRMS.EXE', 'WORMS.EXE')
+    if (-not $wormsProgram) { Write-Log 'Se omite Worms Reinforcements demo: no se encontró un ejecutable en el paquete.' 'WARN' }
 
     # ES-DE Portable mantiene sus datos y sistemas junto a la aplicación.
     New-Item -ItemType File -Path (Join-Path $esdeExe.DirectoryName 'portable.txt') -Force | Out-Null
@@ -477,6 +485,31 @@ try {
     ) | Set-Content -LiteralPath $vikingsLauncher -Encoding ASCII
     }
 
+    if ($wormsProgram) {
+    $wormsLauncher = Join-Path $romDir 'Worms Reinforcements (1995) (Demo).bat'
+    $wormsGameRelative = Get-RelativePath $romDir $wormsProgram.DirectoryName
+    @(
+        '@echo off',
+        'setlocal',
+        'set "LOG=%~dp0Worms Reinforcements demo launch.log"',
+        'echo [%date% %time%] Starting Worms Reinforcements demo > "%LOG%"',
+        ('set "DOSBOX=%~dp0{0}"' -f $dosboxRelative),
+        ('set "GAMEDIR=%~dp0{0}"' -f $wormsGameRelative),
+        'if not exist "%DOSBOX%" (echo ERROR: DOSBox not found: "%DOSBOX%" >> "%LOG%" & exit /b 10)',
+        ('if not exist "%GAMEDIR%\{0}" (echo ERROR: Game executable not found in "%GAMEDIR%" >> "%LOG%" & exit /b 11)' -f $wormsProgram.Name),
+        'echo DOSBox: "%DOSBOX%" >> "%LOG%"',
+        'echo Game folder: "%GAMEDIR%" >> "%LOG%"',
+        'pushd "%GAMEDIR%"',
+        # DOSBox Staging documents a persistent DMA transfer bug in Worms with
+        # Sound Blaster 16; use SB 1.0 for this game only.
+        ('"%DOSBOX%" -noconsole --fullscreen -exit -c "config -set sbtype=sb1" -c "mount c ." -c "mount d . -t cdrom" -c "c:" -c "{0}" >> "%LOG%" 2>&1' -f $wormsProgram.Name),
+        'set "DOSBOX_EXIT=%ERRORLEVEL%"',
+        'popd',
+        'echo DOSBox exit code: %DOSBOX_EXIT% >> "%LOG%"',
+        'exit /b %DOSBOX_EXIT%'
+    ) | Set-Content -LiteralPath $wormsLauncher -Encoding ASCII
+    }
+
     foreach ($extraGame in $extraGamePackages) {
         $safeTitle = $extraGame.Title -replace '[<>:"/\\|?*]', '_'
         $extraLauncherName = "$safeTitle.bat"
@@ -522,6 +555,7 @@ try {
     if ($hexxProgram) { $availableGameFiles['Hexxagon (1993).bat'] = $true }
     if ($omfInstaller) { $availableGameFiles['One Must Fall 2097 (1994).bat'] = $true }
     if ($vikingsProgram) { $availableGameFiles['The Lost Vikings (1993) (Demo).bat'] = $true }
+    if ($wormsProgram) { $availableGameFiles['Worms Reinforcements (1995) (Demo).bat'] = $true }
     foreach ($extraGame in $extraGamePackages) { $availableGameFiles[$extraGame.Launcher] = $true }
 
     # Put release years in filenames and gamelist metadata to help scraper matching.
@@ -533,7 +567,8 @@ try {
         [pscustomobject]@{ Old='Prince of Persia (Demo).bat'; File='Prince of Persia (1990) (Demo).bat'; Name='Prince of Persia (1990) (Demo)'; Date='19900101T000000' },
         [pscustomobject]@{ Old='Hexxagon.bat'; File='Hexxagon (1993).bat'; Name='Hexxagon (1993)'; Date='19930101T000000' },
         [pscustomobject]@{ Old='One Must Fall 2097.bat'; File='One Must Fall 2097 (1994).bat'; Name='One Must Fall 2097 (1994)'; Date='19940101T000000' },
-        [pscustomobject]@{ Old='The Lost Vikings.bat'; File='The Lost Vikings (1993) (Demo).bat'; Name='The Lost Vikings (1993) (Demo)'; Date='19930101T000000' }
+        [pscustomobject]@{ Old='The Lost Vikings.bat'; File='The Lost Vikings (1993) (Demo).bat'; Name='The Lost Vikings (1993) (Demo)'; Date='19930101T000000' },
+        [pscustomobject]@{ Old='Worms Reinforcements.bat'; File='Worms Reinforcements (1995) (Demo).bat'; Name='Worms Reinforcements (1995) (Demo)'; Date='19950101T000000' }
     )
     foreach ($extraGame in $extraGamePackages) {
         $extraFile = $extraGame.Launcher
@@ -663,14 +698,14 @@ try {
     Get-ChildItem -LiteralPath $stagingMediaDirectory -File | Copy-Item -Destination $targetMediaDirectory -Force
     Write-Log "Metadatos preparados en caché temporal y copiados a ES-DE: $metadataStaging"
 
-    $shortcut = Join-Path $Root 'run-retro-portable.bat'
+    $shortcut = Join-Path $Root 'run.bat'
     @('@echo off', ('start "" "{0}" --debug' -f $esdeExe.FullName)) | Set-Content -LiteralPath $shortcut -Encoding ASCII
     Write-Log 'Configuración terminada. ES-DE mostrará los juegos configurados; el año se añadió al nombre y a los metadatos locales cuando se indicó en el CSV.'
     Write-Log ("Juegos adicionales del CSV configurados: {0}" -f $extraGamePackages.Count)
     Write-Log 'One Must Fall 2097 ejecutará su instalador DOS una sola vez al abrirse por primera vez; utiliza la ruta predeterminada C:\OMF.'
     Write-Log "Inicia ES-DE en modo de depuración desde: $shortcut"
     Write-Log "Registro detallado de ES-DE: $(Join-Path $esdeExe.DirectoryName 'logs\es_log.txt')"
-    Write-Host "`nListo. Ejecuta 'run-retro-portable.bat' o abre ES-DE desde $($esdeExe.FullName)."
+    Write-Host "`nListo. Ejecuta 'run.bat' o abre ES-DE desde $($esdeExe.FullName)."
     Write-Host "Registro: $Log`nCaché reutilizable: $Cache"
 }
 catch {

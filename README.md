@@ -6,7 +6,7 @@ Este repositorio prepara una instalación portable de **ES-DE** y **DOSBox Stagi
 
 1. Descarga o clona este repositorio en una carpeta local de Windows.
 2. Ejecuta `setup-retro-portable.bat`. El setup puede tardar mientras descarga ES-DE, DOSBox y los juegos configurados.
-3. Cuando termine sin errores, ejecuta `run-retro-portable.bat` para abrir ES-DE.
+3. Cuando termine sin errores, ejecuta `run.bat` para abrir ES-DE.
 4. En ES-DE, selecciona un juego y pulsa Intro. Los lanzadores incluidos ejecutan DOSBox a pantalla completa. Extreme Pinball estira la imagen para ocupar también los lados de una pantalla panorámica; esto puede deformar un poco sus proporciones.
 
 Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan. Para borrar la caché y la instalación descargada o extraída y empezar de cero, ejecuta `clean.bat`; conserva los scripts, la documentación, `extra_games.csv` y `metadata_sources.csv`.
@@ -25,6 +25,7 @@ El setup ofrece estos juegos fijos; los paquetes de juego se omiten individualme
 | One Must Fall 2097 | Freeware, versión completa | 1994 | [DOSGames.com](https://dosgames.com/files/omf2097.zip) |
 | Jazz Jackrabbit | Shareware 1.1 | 1994 | [DOS Games Archive](https://image.dosgamesarchive.com/games/jazz.zip) |
 | The Lost Vikings | Demo | 1993 | [DOSGames.com](https://dosgames.com/files/vikings.zip) |
+| Worms Reinforcements | Demo | 1995 | [Internet Archive](https://archive.org/download/worms_202611/WORMS.zip) |
 
 Las categorías describen el paquete incluido o su distribución; no reemplazan los términos de licencia de sus titulares. Si algún titular o representante se pone en contacto conmigo para señalar una irregularidad, retiraré cuanto antes el material afectado del proyecto y de sus descargas.
 

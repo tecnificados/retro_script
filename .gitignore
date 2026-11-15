@@ -1,6 +1,7 @@
 # Log file
 *.log
 .setup-cache/
+run.bat
 run-retro-portable.bat
 Emulators/
 ES-DE/
