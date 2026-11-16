@@ -37,12 +37,12 @@ La ficha de DOS Games Archive identifica `jazz.zip` como Jazz Jackrabbit 1.1, sh
 `extra_games.csv` usa las columnas `Title;DownloadUrl;Executable;Year`. `Title`, `DownloadUrl` y `Executable` son obligatorios; `Year` es opcional. La fila actual es:
 
 ```csv
-Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;TET.EXE;1989
+Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;SETUP.EXE,TET.EXE;1989
 ```
 
-El setup aplica la misma lógica a todas las filas: conserva cada ZIP en caché, extrae cada juego en `Games\Extras\<slug>` y genera un `.bat` que monta la raíz del juego y ejecuta lo declarado en `Executable`. El campo admite nombre de archivo o ruta relativa dentro del ZIP, pero no rutas absolutas ni `..`; si el nombre aparece varias veces, hay que indicar la ruta. No se elige un ejecutable automáticamente ni se aplican reglas especiales por título. Este flujo está pensado para juegos que se inicien directamente; no instala paquetes que requieran pasos manuales.
+El setup aplica la misma lógica a todas las filas: conserva cada ZIP en caché, extrae cada juego en `Games\Extras\<slug>` y genera un `.bat` que monta la raíz del juego y ejecuta lo declarado en `Executable`. Este campo admite uno o varios nombres o rutas relativas separados por comas; se ejecutan en orden dentro de la misma sesión de DOSBox. No admite rutas absolutas ni `..`; si un nombre sin ruta aparece varias veces, hay que indicar la ruta. Si falta cualquiera de los ejecutables declarados, se omite ese juego.
 
-El año se conserva en el nombre y en los metadatos locales de ES-DE. El scraping usa el proveedor que el usuario configure en ES-DE; el setup no presupone MobyGames ni otro servicio. El intento del 11 de noviembre de 2026 no pudo resolver `archive.org` desde este entorno, así que no se confirmó que Tet42 se descargara o aparezca en ES-DE. Se conserva la URL proporcionada; reintentar desde una red que resuelva el dominio.
+El año se conserva en el nombre y en los metadatos locales de ES-DE. El scraping usa el proveedor que el usuario configure en ES-DE; el setup no presupone MobyGames ni otro servicio. Aunque un intento anterior no pudo resolver `archive.org`, la copia de trabajo actual contiene el ZIP, `SETUP.EXE`, `TET.EXE` y el lanzador con ambos comandos en ese orden. No se ha confirmado todavía el juego en ejecución.
 
 ## Metadatos iniciales
 

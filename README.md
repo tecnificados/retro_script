@@ -37,13 +37,13 @@ Los juegos adicionales se declaran en [`extra_games.csv`](extra_games.csv), en U
 Title;DownloadUrl;Executable;Year
 ```
 
-Cada fila requiere título, URL directa a un ZIP y el ejecutable incluido en el ZIP. `Executable` puede ser un nombre como `TET.EXE` o una ruta relativa como `BIN\JUEGO.EXE`; no se permiten rutas absolutas ni segmentos `..`. Si solo se indica un nombre y aparece más de una vez en el ZIP, el setup se detiene y pide la ruta completa. El año es opcional y se usa en el nombre mostrado y en los metadatos locales de ES-DE. Ejemplo actual:
+Cada fila requiere título, URL directa a un ZIP y uno o más ejecutables incluidos en el ZIP. `Executable` admite un nombre como `TET.EXE`, una ruta relativa como `BIN\JUEGO.EXE` o varios comandos separados por comas, por ejemplo `INSTALL.EXE, JUEGO.EXE`; se ejecutan en ese orden dentro de la misma sesión de DOSBox. No se permiten rutas absolutas ni segmentos `..`. Si un nombre sin ruta aparece más de una vez en el ZIP, hay que indicar su ruta relativa. El año es opcional y se usa en el nombre mostrado y en los metadatos locales de ES-DE. Ejemplo actual:
 
 ```csv
-Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;TET.EXE;1989
+Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;SETUP.EXE,TET.EXE;1989
 ```
 
-El setup procesa todas las filas con la misma lógica: descarga el ZIP en `.setup-cache\extra-<slug>.zip`, lo descomprime en su carpeta `Games\Extras\<slug>` y genera un lanzador en ES-DE. El lanzador monta la carpeta raíz del juego en DOSBox y ejecuta el archivo indicado en `Executable`, manteniendo disponibles los demás archivos y subcarpetas del ZIP. Si falla la descarga, extracción o detección del ejecutable de un juego, el setup lo omite, lo registra como aviso y sigue con los demás. No hay reglas especiales por juego para las filas del CSV. El año queda como metadato local; el scraping depende del proveedor que tengas configurado en ES-DE. Esta configuración genérica presupone que el ejecutable se puede iniciar directamente; los juegos que necesiten instalador, argumentos o configuración inicial no se preparan automáticamente. Jazz Jackrabbit es un juego fijo del setup y conserva su configuración de sonido de primera ejecución.
+El setup procesa todas las filas con la misma lógica: descarga el ZIP en `.setup-cache\extra-<slug>.zip`, lo descomprime en su carpeta `Games\Extras\<slug>` y genera un lanzador en ES-DE. El lanzador monta la carpeta raíz del juego en DOSBox y ejecuta los archivos declarados en `Executable` en orden, manteniendo disponibles los demás archivos y subcarpetas del ZIP. Si falla la descarga, extracción o detección de cualquiera de los ejecutables, el setup omite ese juego, lo registra como aviso y sigue con los demás. No hay reglas especiales por juego para las filas del CSV. El año queda como metadato local; el scraping depende del proveedor que tengas configurado en ES-DE. Jazz Jackrabbit es un juego fijo del setup y conserva su configuración de sonido de primera ejecución.
 
 El setup también prepara metadatos iniciales desde las páginas indicadas en [`metadata_sources.csv`](metadata_sources.csv). Descarga previamente las imágenes directas a `.setup-cache\metadata-images`, deja el `gamelist.xml` y las imágenes ya preparadas en `.setup-cache\metadata-staging` y después los copia a la instalación portable de ES-DE. Para una fila extra, añade el nombre exacto del `.bat` generado, la página del juego y, opcionalmente, una URL directa de imagen. Se usa esa imagen directa si se indicó; en caso contrario se busca la imagen Open Graph de la página. Los GIF se convierten a PNG y se reutilizan desde caché al reintentar. Título y año siguen procediendo del catálogo local. Si una fuente falla, el setup continúa con los datos locales y lo anota en `setup.log`.
 
@@ -57,7 +57,7 @@ Después de editar el CSV, ejecuta `setup-retro-portable.bat` otra vez.
 
 Si una descarga falla, revisa la URL, la conexión y el error concreto en `setup.log`. Los errores DNS pueden depender del entorno o la red desde la que se ejecuta el setup. Al reintentar, los paquetes completos ya guardados en caché no se descargan de nuevo. Una descarga parcial `.part` se valida antes de reutilizarse.
 
-Si el ZIP se descargó pero no se configuró, revisa que `Executable` coincida con un archivo del ZIP. Si está en una subcarpeta, especifica la ruta relativa. El sistema no elige automáticamente un `.EXE` para evitar lanzar por error un instalador o configurador.
+Si el ZIP se descargó pero no se configuró, revisa que cada nombre o ruta de `Executable` coincida con un archivo del ZIP. Si un archivo está en una subcarpeta, especifica la ruta relativa. El setup valida y ejecuta solo los archivos que declares, en el orden indicado.
 
 ## Archivos y estado del proyecto
 

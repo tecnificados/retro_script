@@ -227,29 +227,36 @@ try {
     $null = Expand-OptionalGame $wormsZip $wormsDir '.ready-demo' 'Worms Reinforcements demo'
     foreach ($extraGame in $extraGamePackages) {
         try {
-            $declaredExecutable = ([string]$extraGame.Executable).Trim()
-            if ([string]::IsNullOrWhiteSpace($declaredExecutable)) { throw 'No se indicó Executable en el CSV.' }
-            $declaredExecutable = $declaredExecutable.Replace('/', '\')
-            if ([System.IO.Path]::IsPathRooted($declaredExecutable) -or $declaredExecutable -match '(^|\\)\.\.(\\|$)') {
-                throw "Executable debe ser un nombre o una ruta relativa dentro del juego: '$declaredExecutable'."
+            $declaredExecutables = @(([string]$extraGame.Executable -split ',') | ForEach-Object { $_.Trim() })
+            $emptyExecutableParts = @($declaredExecutables | Where-Object { [string]::IsNullOrWhiteSpace($_) })
+            if ($declaredExecutables.Count -eq 0 -or $emptyExecutableParts.Count -gt 0) {
+                throw 'Executable debe contener uno o más nombres/rutas, separados por comas y sin elementos vacíos.'
             }
-            $program = $null
-            if ($declaredExecutable.Contains('\')) {
-                $candidatePath = Join-Path $extraGame.Directory $declaredExecutable
-                $program = Get-Item -LiteralPath $candidatePath -ErrorAction SilentlyContinue
-                if ($program -and $program.PSIsContainer) { $program = $null }
-            } else {
-                $programMatches = @(Get-ChildItem -LiteralPath $extraGame.Directory -Filter $declaredExecutable -File -Recurse -ErrorAction SilentlyContinue)
-                if ($programMatches.Count -gt 1) { throw "Hay varios archivos '$declaredExecutable'; indica su ruta relativa en Executable." }
-                if ($programMatches.Count -eq 1) { $program = $programMatches[0] }
+            $programs = @()
+            foreach ($declaredExecutable in $declaredExecutables) {
+                $declaredExecutable = $declaredExecutable.Replace('/', '\')
+                if ([System.IO.Path]::IsPathRooted($declaredExecutable) -or $declaredExecutable -match '(^|\\)\.\.(\\|$)') {
+                    throw "Executable debe contener nombres o rutas relativas dentro del juego: '$declaredExecutable'."
+                }
+                $program = $null
+                if ($declaredExecutable.Contains('\')) {
+                    $candidatePath = Join-Path $extraGame.Directory $declaredExecutable
+                    $program = Get-Item -LiteralPath $candidatePath -ErrorAction SilentlyContinue
+                    if ($program -and $program.PSIsContainer) { $program = $null }
+                } else {
+                    $programMatches = @(Get-ChildItem -LiteralPath $extraGame.Directory -Filter $declaredExecutable -File -Recurse -ErrorAction SilentlyContinue)
+                    if ($programMatches.Count -gt 1) { throw "Hay varios archivos '$declaredExecutable'; indica su ruta relativa en Executable." }
+                    if ($programMatches.Count -eq 1) { $program = $programMatches[0] }
+                }
+                if (-not $program) { throw "No se encontró el ejecutable '$declaredExecutable' dentro del ZIP." }
+                $programs += $program
+                Write-Log "Ejecutable detectado para '$($extraGame.Title)': $($program.Name)"
             }
-            if (-not $program) { throw "No se encontró el ejecutable '$declaredExecutable' dentro del ZIP." }
-            $extraGame | Add-Member -NotePropertyName Program -NotePropertyValue $program -Force
-            Write-Log "Ejecutable detectado para '$($extraGame.Title)': $($program.Name)"
+            $extraGame | Add-Member -NotePropertyName Programs -NotePropertyValue $programs -Force
         }
         catch { Write-Log "Se omite el juego extra '$($extraGame.Title)': $($_.Exception.Message)" 'WARN' }
     }
-    $extraGamePackages = @($extraGamePackages | Where-Object { $_.Program })
+    $extraGamePackages = @($extraGamePackages | Where-Object { $_.Programs })
 
     $esdeExe = Get-ChildItem -LiteralPath $esdeDir -Filter 'ES-DE.exe' -File -Recurse | Select-Object -First 1
     if (-not $esdeExe) { throw 'No se encontró ES-DE.exe dentro del ZIP portable.' }
@@ -278,6 +285,33 @@ try {
 
     # ES-DE Portable mantiene sus datos y sistemas junto a la aplicación.
     New-Item -ItemType File -Path (Join-Path $esdeExe.DirectoryName 'portable.txt') -Force | Out-Null
+    # Keep the existing Windows ROM paths and shell launcher, but present this
+    # collection as DOS in ES-DE's system view.
+    $customSystemsDirectory = Join-Path $esdeExe.DirectoryName 'ES-DE\custom_systems'
+    $customSystemsPath = Join-Path $customSystemsDirectory 'es_systems.xml'
+    New-Item -ItemType Directory -Path $customSystemsDirectory -Force | Out-Null
+    if (Test-Path -LiteralPath $customSystemsPath) {
+        [xml]$customSystems = Get-Content -LiteralPath $customSystemsPath -Raw -Encoding UTF8
+    } else {
+        [xml]$customSystems = '<systemList />'
+    }
+    $windowsSystemOverride = $customSystems.SelectSingleNode('/systemList/system[name="windows"]')
+    if (-not $windowsSystemOverride) {
+        $bundledSystemsPath = Join-Path $esdeExe.DirectoryName 'resources\systems\windows\es_systems.xml'
+        [xml]$bundledSystems = Get-Content -LiteralPath $bundledSystemsPath -Raw -Encoding UTF8
+        $bundledWindowsSystem = $bundledSystems.SelectSingleNode('/systemList/system[name="windows"]')
+        if (-not $bundledWindowsSystem) { throw 'No se encontró el sistema Windows en la configuración de ES-DE.' }
+        $windowsSystemOverride = $customSystems.ImportNode($bundledWindowsSystem, $true)
+        $null = $customSystems.DocumentElement.AppendChild($windowsSystemOverride)
+    }
+    $windowsFullName = $windowsSystemOverride.SelectSingleNode('fullname')
+    if (-not $windowsFullName) { $windowsFullName = $customSystems.CreateElement('fullname'); $null = $windowsSystemOverride.AppendChild($windowsFullName) }
+    $windowsFullName.InnerText = 'DOS'
+    $windowsTheme = $windowsSystemOverride.SelectSingleNode('theme')
+    if (-not $windowsTheme) { $windowsTheme = $customSystems.CreateElement('theme'); $null = $windowsSystemOverride.AppendChild($windowsTheme) }
+    $windowsTheme.InnerText = 'dos'
+    $customSystems.Save($customSystemsPath)
+    Write-Log 'La colección de juegos se mostrará como DOS en ES-DE.'
     $romDir = Join-Path $esdeExe.DirectoryName 'ROMs\windows'
     New-Item -ItemType Directory -Path $romDir -Force | Out-Null
     if ($gameProgram) {
@@ -515,11 +549,12 @@ try {
         $extraLauncherName = "$safeTitle.bat"
         $extraLauncher = Join-Path $romDir $extraLauncherName
         $extraGameRelative = Get-RelativePath $romDir $extraGame.Directory
-        $extraExecutableRelative = Get-RelativePath $extraGame.Directory $extraGame.Program.FullName
+        $extraExecutableRelatives = @($extraGame.Programs | ForEach-Object { Get-RelativePath $extraGame.Directory $_.FullName })
         # The archive is unpacked under Games\Extras\<slug>; launch exactly the
-        # executable declared in extra_games.csv, preserving the ZIP's directory structure.
-        $gameCheck = ('if not exist "%GAMEDIR%\{0}" (echo ERROR: Executable {0} from extra_games.csv not found in "%GAMEDIR%" >> "%LOG%" & exit /b 11)' -f $extraExecutableRelative)
-        $gameCommand = ('"%DOSBOX%" -noconsole --fullscreen -exit -c "mount c ." -c "c:" -c "{0}" >> "%LOG%" 2>&1' -f $extraExecutableRelative)
+        # executables declared in extra_games.csv, preserving their order and paths.
+        $gameChecks = @($extraExecutableRelatives | ForEach-Object { 'if not exist "%GAMEDIR%\{0}" (echo ERROR: Executable {0} from extra_games.csv not found in "%GAMEDIR%" >> "%LOG%" & exit /b 11)' -f $_ })
+        $gameDosboxCommands = @('-c "mount c ."', '-c "c:"') + @($extraExecutableRelatives | ForEach-Object { '-c "{0}"' -f $_ })
+        $gameCommand = '"%DOSBOX%" -noconsole --fullscreen -exit ' + ($gameDosboxCommands -join ' ') + ' >> "%LOG%" 2>&1'
         $extraLogName = "$safeTitle launch.log"
         $extraLauncherLines = @(
             '@echo off',
@@ -528,13 +563,15 @@ try {
             ('echo [%date% %time%] Starting {0} > "%LOG%"' -f $extraGame.Title),
             ('set "DOSBOX=%~dp0{0}"' -f $dosboxRelative),
             ('set "GAMEDIR=%~dp0{0}"' -f $extraGameRelative),
-            ('echo CSV executable: {0} >> "%LOG%"' -f $extraExecutableRelative),
+            ('echo CSV executables: {0} >> "%LOG%"' -f ($extraExecutableRelatives -join ', ')),
             'if not exist "%DOSBOX%" (echo ERROR: DOSBox not found: "%DOSBOX%" >> "%LOG%" & exit /b 10)'
         )
         $extraLauncherLines += @(
-            $gameCheck,
             'echo DOSBox: "%DOSBOX%" >> "%LOG%"',
-            'echo Game folder: "%GAMEDIR%" >> "%LOG%"',
+            'echo Game folder: "%GAMEDIR%" >> "%LOG%"'
+        )
+        $extraLauncherLines += $gameChecks
+        $extraLauncherLines += @(
             'pushd "%GAMEDIR%"',
             $gameCommand,
             'set "DOSBOX_EXIT=%ERRORLEVEL%"',

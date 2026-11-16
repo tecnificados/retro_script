@@ -10,7 +10,7 @@ Ejemplo:
 
 ```csv
 Title;DownloadUrl;Executable;Year
-Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;TET.EXE;1989
+Tet42;https://archive.org/download/Tet42SW1989EduardKappelA.BanzhafStrategyPuzzle/Tet42.zip;SETUP.EXE,TET.EXE;1989
 ```
 
 ## Descarga y caché
@@ -27,15 +27,17 @@ Una URL puede resolver en el equipo del usuario y fallar en otro entorno por DNS
 
 El script extrae ES-DE y DOSBox bajo la carpeta del repositorio. Extrae cada juego en `Games` y, para las filas del CSV, resuelve el ejecutable declarado en `Executable`; después escribe lanzadores `.bat` bajo `ES-DE\...\ROMs\windows`. Los lanzadores construyen rutas relativas desde ES-DE y llevan un log propio. Los lanzadores DOSBox incluidos usan `--fullscreen`. Extreme Pinball también usa un archivo de configuración específico de DOSBox Staging con `aspect = stretch`, `viewport = fit` e `integer_scaling = off` para llenar la pantalla panorámica, a costa de alterar las proporciones de la imagen.
 
+ES-DE recibe una personalización portable de su sistema `windows`: conserva sus rutas y el comando de shell para los `.bat`, pero cambia el nombre y el tema visibles a `DOS`.
+
 Para cada fila extra:
 
 1. Normaliza el título en un slug para caché y carpeta.
 2. Descarga y extrae el ZIP una sola vez.
-3. Resuelve el nombre o ruta relativa de `Executable` dentro de la carpeta extraída; si no aparece, detiene el setup con un error claro. Se permiten subcarpetas, pero no rutas absolutas ni segmentos `..`. Si un nombre sin ruta coincide con más de un archivo, pide precisar la ruta.
-4. Crea un lanzador DOSBox que monte la raíz de la carpeta del juego como `C:` y ejecute el archivo declarado, conservando así el acceso a los demás archivos y subcarpetas del ZIP.
+3. Divide `Executable` por comas, conserva el orden y resuelve cada nombre o ruta relativa dentro de la carpeta extraída. Se permiten subcarpetas, pero no rutas absolutas ni segmentos `..`. Si un nombre sin ruta coincide con más de un archivo, pide precisar la ruta. Si falta cualquiera de los archivos, el setup registra un aviso y omite ese juego.
+4. Crea un lanzador DOSBox que monte la raíz de la carpeta del juego como `C:` y ejecute cada comando en el orden declarado dentro de la misma sesión, conservando así el acceso a los demás archivos y subcarpetas del ZIP.
 5. Incorpora el juego a `gamelist.xml`. Si `Year` contiene cuatro dígitos, añade el año al nombre y un `releasedate` de primero de enero. Esto solo proporciona metadatos locales; no configura ni presupone un proveedor de scraping concreto.
 
-Todas las filas del CSV recorren el mismo proceso genérico; no hay condiciones por título. Este proceso presupone que el ejecutable declarado puede abrirse directamente desde DOSBox con la raíz del ZIP montada como `C:`. Los paquetes que necesiten instalación o pasos de configuración no se preparan automáticamente. Jazz Jackrabbit está fuera del CSV, en la lista fija del setup, y mantiene su paso específico de configuración de sonido.
+Todas las filas del CSV recorren el mismo proceso genérico; no hay condiciones por título. Los archivos declarados se inician en el orden escrito dentro de DOSBox con la raíz del ZIP montada como `C:`; así se puede ejecutar un instalador y luego el juego en una sola sesión. El CSV no permite pasar argumentos adicionales ni automatizar opciones interactivas del instalador. Jazz Jackrabbit está fuera del CSV, en la lista fija del setup, y mantiene su paso específico de configuración de sonido.
 
 ## Scraper inicial y preparación temporal
 

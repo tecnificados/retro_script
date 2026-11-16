@@ -6,12 +6,12 @@ Lee primero `README.md`, `docs/estado-del-proyecto.md` y `docs/flujo-setup.md`. 
 
 - Jazz Jackrabbit está en la lista fija `$Downloads` de `setup-retro-portable.ps1`, con la fuente de DOS Games Archive. El lanzador de Jazz configura el sonido con `SETUP.EXE` la primera vez, detectando `SOUNDCRD.INF`, y luego ejecuta `JAZZ.EXE`.
 - Los juegos extra se declaran en `extra_games.csv`, con el esquema `Title;DownloadUrl;Executable;Year`. Las tres primeras columnas son obligatorias; el año es opcional. Todas las filas usan el mismo flujo, sin reglas especiales por título: extracción en carpeta propia y `.bat` que ejecuta el archivo o ruta relativa declarada.
-- `Executable` puede ser un nombre o una ruta relativa dentro del ZIP. Si el nombre aparece más de una vez, indicar la ruta; no se permiten rutas absolutas ni `..`. El lanzador monta la raíz extraída del juego, conservando el acceso a sus subcarpetas y archivos auxiliares.
-- El flujo genérico espera un ejecutable DOS que se inicie directamente. No ejecuta automáticamente instaladores ni configura argumentos o pasos iniciales.
+- `Executable` puede ser uno o varios nombres/rutas relativas dentro del ZIP, separados por comas. El lanzador ejecuta cada comando en ese orden dentro de una sola sesión DOSBox. Si un nombre aparece más de una vez, indicar la ruta; no se permiten rutas absolutas ni `..`.
+- El flujo genérico puede ejecutar varios archivos declarados, en orden. No automatiza opciones interactivas del instalador ni permite añadir argumentos.
 - El año se guarda en los metadatos locales de ES-DE. El proveedor de scraping es el que el usuario configure en ES-DE; no asumir que MobyGames está disponible.
 - `metadata_sources.csv` contiene el nombre exacto del `.bat`, la página de metadatos y una URL directa de imagen opcional. El setup descarga las imágenes antes de copiarlas, conserva los originales en `.setup-cache\metadata-images`, convierte GIF a PNG y monta los resultados en `.setup-cache\metadata-staging` antes de copiarlos a ES-DE. Si una fuente no responde, el setup continúa con título/año locales.
 - El usuario confirmó que la descarga y visualización de las imágenes ya funciona. Si vuelve a fallar, revisar `setup.log` y el contenido de `.setup-cache\metadata-images` y `.setup-cache\metadata-staging`.
-- Tet42 está en el CSV con la URL proporcionada de Archive.org, ejecutable `TET.EXE` y año 1989. El setup se intentó el 11-11-2026, pero falló al resolver `archive.org`; el ZIP aún no está en caché ni instalado. Conservar la URL y reintentar con DNS/red funcionales.
+- Tet42 está en el CSV con la URL de Archive.org, la secuencia `SETUP.EXE,TET.EXE` y año 1989. La copia de trabajo actual contiene el ZIP, ambos ejecutables y el lanzador generado con los dos comandos en ese orden; falta confirmar el juego en ejecución.
 - Beneath a Steel Sky fue retirado por petición del usuario. No reintroducirlo ni añadir montaje de imágenes de CD para ese caso.
 - Extreme Pinball usa `Games\ExtremePinball\dosbox-video.conf` para estirar la imagen a la pantalla; esto puede deformar las proporciones.
 - Break Machine usa el ZIP de Internet Archive y la caché `break-machine-freeware-v14-archive-org.zip`.
@@ -21,10 +21,8 @@ Lee primero `README.md`, `docs/estado-del-proyecto.md` y `docs/flujo-setup.md`. 
 
 ## Próximos pasos
 
-1. Ejecutar `setup-retro-portable.bat` y revisar `setup.log`.
-2. Confirmar que Tet42 se extrae con `Games\Extras\tet42\TET.EXE`, y que su `.bat` ejecuta `TET.EXE` y la entrada de `gamelist.xml` contiene el año 1989.
-3. Probar Tet42 desde ES-DE. Si falla, revisar su log de lanzamiento y adaptar el lanzador al contenido real del ZIP.
-4. Si se cambia el proceso, actualizar `README.md` y esta guía.
+1. Probar Tet42 desde ES-DE. Si falla, revisar su log de lanzamiento y adaptar la secuencia al contenido real del ZIP.
+2. Si se cambia el proceso, actualizar `README.md` y esta guía.
 
 ## Convenciones
 
