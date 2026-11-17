@@ -29,7 +29,7 @@ El setup ofrece estos juegos fijos; los paquetes de juego se omiten individualme
 
 ## ScummVM y aventuras freeware
 
-El setup descarga [ScummVM](https://www.scummvm.org/en/downloads/) en versión portable dentro de `ES-DE\Emulators\scummvm`, la ruta que detecta ES-DE en Windows, y usa el sistema ScummVM ya incluido. Cada aventura tiene su propia carpeta bajo `ES-DE\ES-DE\ROMs\scummvm`; sus archivos de datos y su descriptor `.scummvm` quedan juntos dentro de ella, sin mezclar archivos de juegos distintos. El setup aplana la carpeta interna del ZIP para que no haya una extracción duplicada.
+El setup descarga [ScummVM](https://www.scummvm.org/en/downloads/) en versión portable dentro de `ES-DE\Emulators\scummvm`, la ruta que detecta ES-DE en Windows, y usa el sistema ScummVM ya incluido. Cada aventura tiene su propia carpeta bajo `ES-DE\ES-DE\ROMs\scummvm`; sus archivos de datos y su descriptor `.scummvm` quedan juntos dentro de ella, sin mezclar archivos de juegos distintos. La carpeta enlaza directamente con su juego para que se lance con una sola selección, sin navegar dentro y volver a seleccionar el mismo título. El setup aplana la carpeta interna del ZIP para que no haya una extracción duplicada.
 
 | Juego | Tipo | Año | Portal y paquete |
 | --- | --- | --- | --- |

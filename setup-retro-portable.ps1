@@ -900,6 +900,30 @@ try {
             $imageNode.InnerText = './downloaded_media/scummvm/screenshots/' + $imageName
         } catch { Write-Log "No se pudo preparar la imagen de $($item.Name): $($_.Exception.Message)" 'WARN' }
     }
+    foreach ($item in $scummvmCatalog) {
+        $descriptorPath = Join-Path $scummvmRomDir $item.Descriptor
+        if (-not (Test-Path -LiteralPath $descriptorPath)) { continue }
+        $gameFolderName = Split-Path -Parent $item.Descriptor
+        $relativeFolder = './' + $gameFolderName.Replace('\', '/')
+        $relativeDescriptor = './' + $item.Descriptor.Replace('\', '/')
+        $folderEntry = $scummvmGamelist.gameList.folder | Where-Object { $_.path -eq $relativeFolder } | Select-Object -First 1
+        if (-not $folderEntry) { $folderEntry = $scummvmGamelist.CreateElement('folder'); $null = $scummvmGamelist.DocumentElement.AppendChild($folderEntry) }
+        $folderValues = @{
+            path = $relativeFolder
+            name = $item.Name
+            releasedate = $item.Date
+            desc = $item.Description
+            # folderlink is resolved from the folder itself, unlike a game's <path>
+            # which is resolved from the system ROM directory.
+            folderlink = Split-Path -Leaf $item.Descriptor
+            image = ('./downloaded_media/scummvm/screenshots/' + $item.GameId + '.png')
+        }
+        foreach ($fieldName in @('path', 'name', 'releasedate', 'desc', 'folderlink', 'image')) {
+            $node = $folderEntry.SelectSingleNode($fieldName)
+            if (-not $node) { $node = $scummvmGamelist.CreateElement($fieldName); $null = $folderEntry.AppendChild($node) }
+            $node.InnerText = $folderValues[$fieldName]
+        }
+    }
     $scummvmGamelist.Save($scummvmGamelistPath)
     $scummvmTargetMedia = Join-Path $esdeExe.DirectoryName 'ES-DE\downloaded_media\scummvm\screenshots'
     New-Item -ItemType Directory -Path $scummvmTargetMedia -Force | Out-Null
