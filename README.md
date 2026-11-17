@@ -1,6 +1,6 @@
 # Retro portable para Windows
 
-Este repositorio prepara una instalación portable de **ES-DE** y **DOSBox Staging** para organizar y jugar a juegos DOS desde Windows. El proceso se ejecuta desde un `.bat`, descarga los componentes que faltan, conserva las descargas en una caché local, extrae los paquetes una sola vez, crea los lanzadores y guarda un registro.
+Este repositorio prepara una instalación portable de **ES-DE**, **DOSBox Staging** y **ScummVM** para organizar y jugar a juegos DOS y aventuras compatibles desde Windows. El proceso se ejecuta desde un `.bat`, descarga los componentes que faltan, conserva las descargas en una caché local, extrae los paquetes una sola vez, crea los lanzadores y guarda un registro.
 
 ## Inicio rápido
 
@@ -26,6 +26,18 @@ El setup ofrece estos juegos fijos; los paquetes de juego se omiten individualme
 | Jazz Jackrabbit | Shareware 1.1 | 1994 | [DOS Games Archive](https://image.dosgamesarchive.com/games/jazz.zip) |
 | The Lost Vikings | Demo | 1993 | [DOSGames.com](https://dosgames.com/files/vikings.zip) |
 | Worms Reinforcements | Demo | 1995 | [Internet Archive](https://archive.org/download/worms_202611/WORMS.zip) |
+
+## ScummVM y aventuras freeware
+
+El setup descarga [ScummVM](https://www.scummvm.org/en/downloads/) en versión portable dentro de `ES-DE\Emulators\scummvm`, la ruta que detecta ES-DE en Windows, y usa el sistema ScummVM ya incluido. Cada aventura tiene su propia carpeta bajo `ES-DE\ES-DE\ROMs\scummvm`; sus archivos de datos y su descriptor `.scummvm` quedan juntos dentro de ella, sin mezclar archivos de juegos distintos. El setup aplana la carpeta interna del ZIP para que no haya una extracción duplicada.
+
+| Juego | Tipo | Año | Portal y paquete |
+| --- | --- | --- | --- |
+| Dráscula: The Vampire Strikes Back | Freeware; base en inglés y complemento de idiomas que incluye español | 1996 | [ScummVM, base](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-1.0.zip) y [complemento de idiomas](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-int-1.0.zip) |
+| Lure of the Temptress | Freeware, edición española | 1992 | [ScummVM](https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-es-1.1.zip) |
+| Maniac Mansion Deluxe | Freeware, remake hecho por fans; incluye traducción al español y los datos para ScummVM/AGS | 2004 | [Internet Archive](https://archive.org/download/mmd_20240815/MMD.zip) |
+
+ScummVM y sus juegos se intentan instalar por separado de los paquetes DOS. Si falla la descarga o extracción de un juego, se registra el aviso y se continúa con el resto. Las imágenes y páginas fuente de estas fichas están en [`metadata_sources.csv`](metadata_sources.csv). El paquete de Dráscula indicado por el usuario es un complemento de idiomas; el setup añade además la versión freeware base, necesaria para que el juego esté completo. Maniac Mansion Deluxe es un remake freeware de fans compatible con el motor AGS de ScummVM; el setup incluye sus datos y solo crea la entrada de juego si encuentra `Maniac.exe`.
 
 Las categorías describen el paquete incluido o su distribución; no reemplazan los términos de licencia de sus titulares. Si algún titular o representante se pone en contacto conmigo para señalar una irregularidad, retiraré cuanto antes el material afectado del proyecto y de sus descargas.
 

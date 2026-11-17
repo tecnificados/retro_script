@@ -12,6 +12,8 @@ $Cache = Join-Path $Root '.setup-cache'
 $Log = Join-Path $Root 'setup.log'
 $EsdeVersion = '3.5.0'
 $DosboxVersion = '0.83.0'
+$ScummvmVersion = '2026.4.0'
+$ScummvmDownload = [pscustomobject]@{ Name='ScummVM'; Url="https://downloads.scummvm.org/frs/scummvm/$ScummvmVersion/scummvm-$ScummvmVersion-win32-x86_64.zip"; Archive="scummvm-$ScummvmVersion-win64.zip" }
 $Downloads = @(
     [pscustomobject]@{ Name='ES-DE'; Url="https://packages.es-de.org/release/$EsdeVersion/ES-DE_${EsdeVersion}-x64_Portable.zip"; Archive='esde.zip' },
     [pscustomobject]@{ Name='DOSBox Staging'; Url="https://github.com/dosbox-staging/dosbox-staging/releases/download/v$DosboxVersion/dosbox-staging-windows-x64-v$DosboxVersion.zip"; Archive='dosbox.zip' },
@@ -23,7 +25,11 @@ $Downloads = @(
     [pscustomobject]@{ Name='One Must Fall 2097 full version'; Url='https://dosgames.com/files/omf2097.zip'; Archive='one-must-fall-2097-full.zip' },
     [pscustomobject]@{ Name='Jazz Jackrabbit shareware v1.1'; Url='https://image.dosgamesarchive.com/games/jazz.zip'; Archive='jazz-jackrabbit-shareware-v11.zip' },
     [pscustomobject]@{ Name='The Lost Vikings demo'; Url='https://dosgames.com/files/vikings.zip'; Archive='the-lost-vikings-demo.zip' },
-    [pscustomobject]@{ Name='Worms Reinforcements demo'; Url='https://archive.org/download/worms_202611/WORMS.zip'; Archive='worms-reinforcements-demo.zip' }
+    [pscustomobject]@{ Name='Worms Reinforcements demo'; Url='https://archive.org/download/worms_202611/WORMS.zip'; Archive='worms-reinforcements-demo.zip' },
+    [pscustomobject]@{ Name='Dráscula freeware (English base)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-1.0.zip'; Archive='drascula-freeware-base.zip' },
+    [pscustomobject]@{ Name='Dráscula language add-on (Spanish, German, French and Italian)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-int-1.0.zip'; Archive='drascula-language-addon.zip' },
+    [pscustomobject]@{ Name='Lure of the Temptress freeware (Spanish)'; Url='https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-es-1.1.zip'; Archive='lure-of-the-temptress-freeware-spanish.zip' },
+    [pscustomobject]@{ Name='Maniac Mansion Deluxe freeware'; Url='https://archive.org/download/mmd_20240815/MMD.zip'; Archive='maniac-mansion-deluxe-freeware-mmd-20240815.zip' }
 )
 
 function Write-Log([string]$Message, [string]$Level='INFO') {
@@ -86,6 +92,22 @@ function Find-GameFile([string]$Directory, [string[]]$Names) {
         if ($file) { return $file }
     }
     return $null
+}
+
+function Copy-GameFilesFlat([string]$Source, [string]$Destination) {
+    New-Item -ItemType Directory -Path $Destination -Force | Out-Null
+    $files = @(Get-ChildItem -LiteralPath $Source -File -Recurse -Force | Where-Object { $_.Name -notlike '.ready*' })
+    foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $Destination $file.Name) -Force }
+}
+
+function Ensure-ManagedGameDirectory([string]$Parent, [string]$Name) {
+    $parentPath = [System.IO.Path]::GetFullPath($Parent).TrimEnd('\') + '\'
+    $gamePath = [System.IO.Path]::GetFullPath((Join-Path $Parent $Name))
+    if (-not $gamePath.StartsWith($parentPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "La carpeta del juego no está dentro del sistema ScummVM: $gamePath"
+    }
+    New-Item -ItemType Directory -Path $gamePath -Force | Out-Null
+    return $gamePath
 }
 
 function Expand-Once([string]$Archive, [string]$Destination, [string]$Marker='.ready') {
@@ -162,6 +184,7 @@ try {
     }
     $esdeZip = Get-Archive $Downloads[0].Name $Downloads[0].Url $Downloads[0].Archive
     $dosboxZip = Get-Archive $Downloads[1].Name $Downloads[1].Url $Downloads[1].Archive
+    $scummvmZip = Get-Archive $ScummvmDownload.Name $ScummvmDownload.Url $ScummvmDownload.Archive
     $oldJazzCache = Join-Path $Cache 'extra-jazz-jackrabbit.zip'
     $newJazzCache = Join-Path $Cache $Downloads[8].Archive
     if (-not (Test-Path -LiteralPath $newJazzCache) -and (Test-Path -LiteralPath $oldJazzCache)) {
@@ -182,6 +205,10 @@ try {
     $jazzZip = $optionalGameZips[$Downloads[8].Archive]
     $vikingsZip = $optionalGameZips[$Downloads[9].Archive]
     $wormsZip = $optionalGameZips[$Downloads[10].Archive]
+    $drasculaBaseZip = $optionalGameZips[$Downloads[11].Archive]
+    $drasculaAddonZip = $optionalGameZips[$Downloads[12].Archive]
+    $lureZip = $optionalGameZips[$Downloads[13].Archive]
+    $maniacDeluxeZip = $optionalGameZips[$Downloads[14].Archive]
     $extraGamePackages = @()
     foreach ($extraGame in $extraGames) {
         try {
@@ -199,6 +226,29 @@ try {
     Expand-Once $esdeZip $esdeDir
     $dosboxDir = Join-Path $Root 'Emulators\dosbox-staging'
     Expand-Once $dosboxZip $dosboxDir
+    # ES-DE's Windows find rules search one level above its portable folder.
+    $scummvmDir = Join-Path $esdeDir 'Emulators\scummvm'
+    New-Item -ItemType Directory -Path (Split-Path -Parent $scummvmDir) -Force | Out-Null
+    $legacyScummvmDir = Join-Path $Root 'Emulators\scummvm'
+    if (-not (Test-Path -LiteralPath $scummvmDir) -and (Test-Path -LiteralPath $legacyScummvmDir)) {
+        Move-Item -LiteralPath $legacyScummvmDir -Destination $scummvmDir
+        Write-Log 'ScummVM movido a la carpeta portable que localiza ES-DE.'
+    }
+    Expand-Once $scummvmZip $scummvmDir
+    $nestedScummvmExe = Get-ChildItem -LiteralPath $scummvmDir -Filter 'scummvm.exe' -File -Recurse | Where-Object { $_.DirectoryName -ne $scummvmDir } | Select-Object -First 1
+    if ($nestedScummvmExe) {
+        Get-ChildItem -LiteralPath $nestedScummvmExe.DirectoryName -Force | Copy-Item -Destination $scummvmDir -Recurse -Force
+        $nestedScummvmDir = [System.IO.Path]::GetFullPath($nestedScummvmExe.DirectoryName)
+        $scummvmRootPath = [System.IO.Path]::GetFullPath($scummvmDir).TrimEnd('\') + '\'
+        if ($nestedScummvmDir.StartsWith($scummvmRootPath, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Remove-Item -LiteralPath $nestedScummvmDir -Recurse -Force
+        }
+        Write-Log 'ScummVM quedó instalado en una sola carpeta, en la ruta que busca ES-DE.'
+    }
+    $scummvmExe = Join-Path $scummvmDir 'scummvm.exe'
+    if (-not (Test-Path -LiteralPath $scummvmExe -PathType Leaf)) { throw 'No se pudo dejar scummvm.exe en la ruta que busca ES-DE.' }
+    # ScummVM switches to portable mode when this file sits beside its executable.
+    New-Item -ItemType File -Path (Join-Path $scummvmDir 'scummvm.ini') -Force | Out-Null
     $gameDir = Join-Path $Root 'Games\BreakMachine'
     $null = Expand-OptionalGame $gameZip $gameDir '.ready-freeware-v14' 'Break Machine'
     $pinballDir = Join-Path $Root 'Games\ExtremePinball'
@@ -225,6 +275,57 @@ try {
     $null = Expand-OptionalGame $vikingsZip $vikingsDir '.ready-demo' 'The Lost Vikings demo'
     $wormsDir = Join-Path $Root 'Games\WormsReinforcementsDemo'
     $null = Expand-OptionalGame $wormsZip $wormsDir '.ready-demo' 'Worms Reinforcements demo'
+    $scummvmGamesDir = Join-Path $Root 'Games\ScummVM'
+    $drasculaBaseDir = Join-Path $scummvmGamesDir 'Drascula-base'
+    $drasculaAddonDir = Join-Path $scummvmGamesDir 'Drascula-language-addon'
+    $lureDir = Join-Path $scummvmGamesDir 'Lure-of-the-Temptress'
+    $maniacDeluxeDir = Join-Path $scummvmGamesDir 'Maniac-Mansion-Deluxe'
+    $drasculaBaseReady = Expand-OptionalGame $drasculaBaseZip $drasculaBaseDir '.ready-freeware-base' 'Dráscula freeware (English base)'
+    $drasculaAddonReady = Expand-OptionalGame $drasculaAddonZip $drasculaAddonDir '.ready-language-addon' 'Dráscula language add-on'
+    $lureReady = Expand-OptionalGame $lureZip $lureDir '.ready-freeware-spanish' 'Lure of the Temptress freeware (Spanish)'
+    $maniacDeluxeReady = Expand-OptionalGame $maniacDeluxeZip $maniacDeluxeDir '.ready-freeware-mmd-20240815' 'Maniac Mansion Deluxe freeware'
+    $scummvmRomDir = Join-Path $esdeDir 'ES-DE\ROMs\scummvm'
+    New-Item -ItemType Directory -Path $scummvmRomDir -Force | Out-Null
+    $managedRootNames = @('drascula.scummvm', 'lure.scummvm', 'maniacmansiondeluxe.scummvm', 'mmd14.exe', 'mmd14setup.exe')
+    if ($drasculaBaseReady) {
+        $drasculaGameFile = Find-GameFile $drasculaBaseDir @('packet.001')
+        if ($drasculaGameFile) {
+            $drasculaRomDir = Ensure-ManagedGameDirectory $scummvmRomDir 'Drascula'
+            Copy-GameFilesFlat $drasculaBaseDir $drasculaRomDir
+            $managedRootNames += @(Get-ChildItem -LiteralPath $drasculaBaseDir -File -Recurse -Force | ForEach-Object Name)
+            if ($drasculaAddonReady) {
+                Copy-GameFilesFlat $drasculaAddonDir $drasculaRomDir
+                $managedRootNames += @(Get-ChildItem -LiteralPath $drasculaAddonDir -File -Recurse -Force | ForEach-Object Name)
+            }
+            else { Write-Log 'Dráscula se instalará en inglés porque no se pudo descargar o extraer el complemento de idiomas.' 'WARN' }
+            Set-Content -LiteralPath (Join-Path $drasculaRomDir 'drascula.scummvm') -Value 'drascula' -Encoding ASCII
+            Write-Log 'Dráscula preparado para ES-DE con su identificador ScummVM.'
+        } else { Write-Log 'Se omite Dráscula: el paquete base no contiene packet.001.' 'WARN' }
+    }
+    if ($lureReady) {
+        $lureRomDir = Ensure-ManagedGameDirectory $scummvmRomDir 'Lure of the Temptress'
+        Copy-GameFilesFlat $lureDir $lureRomDir
+        $managedRootNames += @(Get-ChildItem -LiteralPath $lureDir -File -Recurse -Force | ForEach-Object Name)
+        Set-Content -LiteralPath (Join-Path $lureRomDir 'lure.scummvm') -Value 'lure' -Encoding ASCII
+        Write-Log 'Lure of the Temptress preparado para ES-DE con su identificador ScummVM.'
+    }
+    if ($maniacDeluxeReady) {
+        $maniacExecutable = Find-GameFile $maniacDeluxeDir @('Maniac.exe')
+        if ($maniacExecutable) {
+            $maniacRomDir = Ensure-ManagedGameDirectory $scummvmRomDir 'Maniac Mansion Deluxe'
+            Copy-GameFilesFlat $maniacExecutable.DirectoryName $maniacRomDir
+            $managedRootNames += @(Get-ChildItem -LiteralPath $maniacExecutable.DirectoryName -File -Recurse -Force | ForEach-Object Name)
+            Set-Content -LiteralPath (Join-Path $maniacRomDir 'maniacmansiondeluxe.scummvm') -Value 'maniacmansiondeluxe' -Encoding ASCII
+            Write-Log 'Maniac Mansion Deluxe preparado para ES-DE con sus datos y el identificador ScummVM/AGS.'
+        } else {
+            $managedRootNames += @(Get-ChildItem -LiteralPath (Join-Path $maniacDeluxeDir 'MMD') -File -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object Name)
+            Write-Log 'Maniac Mansion Deluxe: el archivo no contiene Maniac.exe; se omite el juego.' 'WARN'
+        }
+    }
+    $managedRootNames = @($managedRootNames | Select-Object -Unique)
+    foreach ($rootFile in @(Get-ChildItem -LiteralPath $scummvmRomDir -File -Force)) {
+        if ($managedRootNames -contains $rootFile.Name) { Remove-Item -LiteralPath $rootFile.FullName -Force }
+    }
     foreach ($extraGame in $extraGamePackages) {
         try {
             $declaredExecutables = @(([string]$extraGame.Executable -split ',') | ForEach-Object { $_.Trim() })
@@ -295,9 +396,9 @@ try {
     } else {
         [xml]$customSystems = '<systemList />'
     }
+    $bundledSystemsPath = Join-Path $esdeExe.DirectoryName 'resources\systems\windows\es_systems.xml'
     $windowsSystemOverride = $customSystems.SelectSingleNode('/systemList/system[name="windows"]')
     if (-not $windowsSystemOverride) {
-        $bundledSystemsPath = Join-Path $esdeExe.DirectoryName 'resources\systems\windows\es_systems.xml'
         [xml]$bundledSystems = Get-Content -LiteralPath $bundledSystemsPath -Raw -Encoding UTF8
         $bundledWindowsSystem = $bundledSystems.SelectSingleNode('/systemList/system[name="windows"]')
         if (-not $bundledWindowsSystem) { throw 'No se encontró el sistema Windows en la configuración de ES-DE.' }
@@ -310,8 +411,27 @@ try {
     $windowsTheme = $windowsSystemOverride.SelectSingleNode('theme')
     if (-not $windowsTheme) { $windowsTheme = $customSystems.CreateElement('theme'); $null = $windowsSystemOverride.AppendChild($windowsTheme) }
     $windowsTheme.InnerText = 'dos'
+    $scummvmSystemOverride = $customSystems.SelectSingleNode('/systemList/system[name="scummvm"]')
+    if (-not $scummvmSystemOverride) {
+        [xml]$bundledSystems = Get-Content -LiteralPath $bundledSystemsPath -Raw -Encoding UTF8
+        $bundledScummvmSystem = $bundledSystems.SelectSingleNode('/systemList/system[name="scummvm"]')
+        if (-not $bundledScummvmSystem) { throw 'No se encontró el sistema ScummVM en la configuración de ES-DE.' }
+        $scummvmSystemOverride = $customSystems.ImportNode($bundledScummvmSystem, $true)
+        $null = $customSystems.DocumentElement.AppendChild($scummvmSystemOverride)
+    }
+    $scummvmStandaloneCommand = $scummvmSystemOverride.SelectSingleNode('command[@label="ScummVM (Standalone)"]')
+    if (-not $scummvmStandaloneCommand) { throw 'No se encontró el comando independiente de ScummVM en ES-DE.' }
+    $scummvmStandaloneCommand.InnerText = '%STARTDIR%=%GAMEDIR% %EMULATOR_SCUMMVM% --path=%GAMEDIR% -f --language=es %BASENAME%'
+    # ES-DE selects the first command as the default. The bundled system lists
+    # RetroArch first, but this portable setup ships standalone ScummVM only.
+    foreach ($command in @($scummvmSystemOverride.SelectNodes('command'))) {
+        if ($command.GetAttribute('label') -ne 'ScummVM (Standalone)') {
+            $null = $scummvmSystemOverride.RemoveChild($command)
+        }
+    }
     $customSystems.Save($customSystemsPath)
     Write-Log 'La colección de juegos se mostrará como DOS en ES-DE.'
+    Write-Log 'ScummVM independiente será el emulador predeterminado, arrancará a pantalla completa y usará la carpeta de datos del juego.'
     $romDir = Join-Path $esdeExe.DirectoryName 'ROMs\windows'
     New-Item -ItemType Directory -Path $romDir -Force | Out-Null
     if ($gameProgram) {
@@ -733,6 +853,57 @@ try {
     $targetMediaDirectory = Join-Path $esdeExe.DirectoryName 'ES-DE\downloaded_media\windows\screenshots'
     New-Item -ItemType Directory -Path $targetMediaDirectory -Force | Out-Null
     Get-ChildItem -LiteralPath $stagingMediaDirectory -File | Copy-Item -Destination $targetMediaDirectory -Force
+
+    # Keep each ScummVM game in its own directory to prevent its data files from
+    # mixing with other games. ES-DE scans each directory for its .scummvm file.
+    $scummvmCatalog = @(
+        [pscustomobject]@{ Descriptor='Drascula/drascula.scummvm'; GameId='drascula'; Name='Dráscula: The Vampire Strikes Back (1996) (Freeware)'; Date='19960101T000000'; Description='Aventura gráfica freeware de Alcachofa Soft. Incluye el juego base y el complemento de idiomas español, alemán, francés e italiano.' },
+        [pscustomobject]@{ Descriptor='Lure of the Temptress/lure.scummvm'; GameId='lure'; Name='Lure of the Temptress (1992) (Freeware)'; Date='19920101T000000'; Description='Aventura gráfica freeware de Revolution Software. Esta edición incluye los textos en español.' },
+        [pscustomobject]@{ Descriptor='Maniac Mansion Deluxe/maniacmansiondeluxe.scummvm'; GameId='maniacmansiondeluxe'; Name='Maniac Mansion Deluxe (2004) (Freeware) (Español)'; Date='20040521T000000'; Description='Remake freeware hecho por fans de Maniac Mansion. Incluye traducción al español y se ejecuta con el motor AGS de ScummVM.' }
+    )
+    $scummvmGamelistDirectory = Join-Path $esdeExe.DirectoryName 'ES-DE\gamelists\scummvm'
+    $scummvmGamelistPath = Join-Path $scummvmGamelistDirectory 'gamelist.xml'
+    if (Test-Path -LiteralPath $scummvmGamelistPath) { [xml]$scummvmGamelist = Get-Content -LiteralPath $scummvmGamelistPath -Raw -Encoding UTF8 }
+    else { [xml]$scummvmGamelist = '<gameList />' }
+    $scummvmStagingMedia = Join-Path $Cache 'metadata-staging\downloaded_media\scummvm\screenshots'
+    New-Item -ItemType Directory -Path $scummvmGamelistDirectory, $scummvmStagingMedia -Force | Out-Null
+    $scummvmImageCache = Join-Path $Cache 'metadata-images'
+    foreach ($legacyEntry in @($scummvmGamelist.gameList.game)) {
+        if ($legacyEntry.path -in @('./drascula.scummvm', './lure.scummvm', './maniacmansiondeluxe.scummvm')) {
+            $null = $scummvmGamelist.DocumentElement.RemoveChild($legacyEntry)
+        }
+    }
+    foreach ($item in $scummvmCatalog) {
+        $descriptorPath = Join-Path $scummvmRomDir $item.Descriptor
+        if (-not (Test-Path -LiteralPath $descriptorPath)) { continue }
+        $relativeDescriptor = './' + $item.Descriptor
+        $entry = $scummvmGamelist.gameList.game | Where-Object { $_.path -eq $relativeDescriptor } | Select-Object -First 1
+        if (-not $entry) { $entry = $scummvmGamelist.CreateElement('game'); $null = $scummvmGamelist.DocumentElement.AppendChild($entry) }
+        foreach ($field in @(@('path', $relativeDescriptor), @('name', $item.Name), @('releasedate', $item.Date), @('desc', $item.Description))) {
+            $node = $entry.SelectSingleNode($field[0])
+            if (-not $node) { $node = $scummvmGamelist.CreateElement($field[0]); $null = $entry.AppendChild($node) }
+            $node.InnerText = $field[1]
+        }
+        try {
+            $scummvmMetadata = $metadataSources | Where-Object { $_.System -eq 'scummvm' -and $_.GameFile -eq $relativeDescriptor } | Select-Object -First 1
+            if (-not $scummvmMetadata -or [string]::IsNullOrWhiteSpace($scummvmMetadata.ImageUrl)) { throw 'No hay una URL directa de imagen configurada en metadata_sources.csv.' }
+            $imageCachePath = Join-Path $scummvmImageCache ($item.GameId + '.png')
+            if (-not (Test-Path -LiteralPath $imageCachePath) -or (Get-ImageFormat $imageCachePath) -ne '.png') {
+                Invoke-WebRequest -Uri $scummvmMetadata.ImageUrl -OutFile "$imageCachePath.part" -MaximumRedirection 10 -UseBasicParsing
+                if ((Get-ImageFormat "$imageCachePath.part") -ne '.png') { throw 'La URL no devolvió una imagen PNG válida.' }
+                Move-Item -LiteralPath "$imageCachePath.part" -Destination $imageCachePath -Force
+            }
+            $imageName = $item.GameId + '.png'
+            Copy-Item -LiteralPath $imageCachePath -Destination (Join-Path $scummvmStagingMedia $imageName) -Force
+            $imageNode = $entry.SelectSingleNode('image')
+            if (-not $imageNode) { $imageNode = $scummvmGamelist.CreateElement('image'); $null = $entry.AppendChild($imageNode) }
+            $imageNode.InnerText = './downloaded_media/scummvm/screenshots/' + $imageName
+        } catch { Write-Log "No se pudo preparar la imagen de $($item.Name): $($_.Exception.Message)" 'WARN' }
+    }
+    $scummvmGamelist.Save($scummvmGamelistPath)
+    $scummvmTargetMedia = Join-Path $esdeExe.DirectoryName 'ES-DE\downloaded_media\scummvm\screenshots'
+    New-Item -ItemType Directory -Path $scummvmTargetMedia -Force | Out-Null
+    Get-ChildItem -LiteralPath $scummvmStagingMedia -File | Copy-Item -Destination $scummvmTargetMedia -Force
     Write-Log "Metadatos preparados en caché temporal y copiados a ES-DE: $metadataStaging"
 
     $shortcut = Join-Path $Root 'run.bat'

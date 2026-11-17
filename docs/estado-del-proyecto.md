@@ -4,7 +4,7 @@
 
 ## Objetivo
 
-Preparar desde Windows una colección portable de juegos DOS usando ES-DE como interfaz y DOSBox Staging como emulador. La instalación se genera desde el setup, guarda un registro y reutiliza las descargas válidas de la caché.
+Preparar desde Windows una colección portable de juegos DOS y aventuras ScummVM usando ES-DE como interfaz, DOSBox Staging para los juegos DOS y ScummVM para las aventuras compatibles. La instalación se genera desde el setup, guarda un registro y reutiliza las descargas válidas de la caché.
 
 ## Catálogo fijo del setup
 
@@ -12,6 +12,7 @@ Preparar desde Windows una colección portable de juegos DOS usando ES-DE como i
 | --- | --- | --- | --- |
 | ES-DE | Portable 3.5.0 | Interfaz y gamelist de Windows | [ES-DE](https://packages.es-de.org/) |
 | DOSBox Staging | 0.83.0 | Emulador DOS | [GitHub Releases](https://github.com/dosbox-staging/dosbox-staging/releases) |
+| ScummVM | Portable 2026.4.0 | Motor para aventuras gráficas compatibles | [ScummVM Downloads](https://www.scummvm.org/en/downloads/) |
 | Break Machine | Shareware; paquete configurado: edición freeware v1.4 | 1995 | [Internet Archive](https://archive.org/download/break-machine-freeware-v14/break-machine-freeware-v14.zip) |
 | Extreme Pinball | Demo | 1995 | [DOSGames.com](https://dosgames.com/files/DOSBOX_EXTREMEPINBALL.ZIP) |
 | DOOM | Shareware | 1993 | [DOSGames.com](https://dosgames.com/files/DOSBOX_DOOM.ZIP) |
@@ -21,8 +22,11 @@ Preparar desde Windows una colección portable de juegos DOS usando ES-DE como i
 | Jazz Jackrabbit | Shareware 1.1 | 1994 | [DOS Games Archive](https://image.dosgamesarchive.com/games/jazz.zip) |
 | The Lost Vikings | Demo | 1993 | [DOSGames.com](https://dosgames.com/files/vikings.zip) |
 | Worms Reinforcements | Demo | 1995 | [Internet Archive](https://archive.org/download/worms_202611/WORMS.zip) |
+| Dráscula: The Vampire Strikes Back | Freeware; base inglesa y complemento de idiomas con español | 1996 | [ScummVM: juego base](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-1.0.zip) y [complemento multilingüe](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-int-1.0.zip) |
+| Lure of the Temptress | Freeware, edición española | 1992 | [ScummVM](https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-es-1.1.zip) |
+| Maniac Mansion Deluxe | Freeware, remake fan-made compatible con ScummVM mediante AGS; se fuerza la traducción española incluida | 2004 | [Internet Archive](https://archive.org/download/mmd_20240815/MMD.zip) |
 
-Los lanzadores se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento que llena la pantalla panorámica, con posible deformación de proporciones. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la ruta predeterminada `C:\OMF`.
+Los lanzadores DOS se generan con DOSBox a pantalla completa. Extreme Pinball usa un perfil de estiramiento que llena la pantalla panorámica, con posible deformación de proporciones. One Must Fall 2097 ejecuta su instalador DOS una sola vez y espera la ruta predeterminada `C:\OMF`. Cada juego ScummVM tiene una carpeta propia bajo `ROMs\scummvm`, con sus datos y descriptor juntos; el setup los incluye en el gamelist local con capturas. Dráscula, Lure y los datos de Maniac Mansion Deluxe se han detectado con ScummVM.
 
 Los portales enlazados son las fuentes de descarga configuradas actualmente. Las categorías identifican la edición incluida y no sustituyen los términos de los titulares. Si un titular o representante comunica una irregularidad, se retirará cuanto antes del proyecto y de las descargas el material afectado.
 
@@ -46,7 +50,7 @@ El año se conserva en el nombre y en los metadatos locales de ES-DE. El scrapin
 
 ## Metadatos iniciales
 
-`metadata_sources.csv` define una página y una URL directa de imagen opcional por nombre de lanzador. El setup descarga previamente las imágenes a `.setup-cache\metadata-images`, genera el material en `.setup-cache\metadata-staging` y lo copia a ES-DE una vez creados los lanzadores. Los GIF se convierten a PNG; la caché de imágenes se reutiliza al reintentar y `clean.bat` la borra. Un fallo de fuente no detiene el setup. Para un juego extra, añade el nombre exacto del `.bat` generado.
+`metadata_sources.csv` define el sistema, la página y una URL directa de imagen opcional por nombre de lanzador. El setup descarga previamente las imágenes a `.setup-cache\metadata-images`, genera el material en `.setup-cache\metadata-staging` y lo copia a ES-DE una vez creados los lanzadores. Los GIF se convierten a PNG; la caché de imágenes se reutiliza al reintentar y `clean.bat` la borra. Un fallo de fuente no detiene el setup. Para un juego extra, añade el nombre exacto del `.bat` generado. Dráscula y Lure usan capturas del sitio de ScummVM; Maniac Mansion Deluxe usa una captura de MobyGames.
 
 La última ejecución confirmada por el usuario mostró correctamente las imágenes preparadas por este flujo en ES-DE.
 
