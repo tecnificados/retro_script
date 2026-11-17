@@ -29,7 +29,8 @@ $Downloads = @(
     [pscustomobject]@{ Name='Dráscula freeware (English base)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-1.0.zip'; Archive='drascula-freeware-base.zip' },
     [pscustomobject]@{ Name='Dráscula language add-on (Spanish, German, French and Italian)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-int-1.0.zip'; Archive='drascula-language-addon.zip' },
     [pscustomobject]@{ Name='Lure of the Temptress freeware (Spanish)'; Url='https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-es-1.1.zip'; Archive='lure-of-the-temptress-freeware-spanish.zip' },
-    [pscustomobject]@{ Name='Maniac Mansion Deluxe freeware'; Url='https://archive.org/download/mmd_20240815/MMD.zip'; Archive='maniac-mansion-deluxe-freeware-mmd-20240815.zip' }
+    [pscustomobject]@{ Name='Maniac Mansion Deluxe freeware'; Url='https://archive.org/download/mmd_20240815/MMD.zip'; Archive='maniac-mansion-deluxe-freeware-mmd-20240815.zip' },
+    [pscustomobject]@{ Name='Dráscula freeware music add-on (MP3)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-audio-mp3-2.0.zip'; Archive='drascula-freeware-music-addon-mp3.zip' }
 )
 
 function Write-Log([string]$Message, [string]$Level='INFO') {
@@ -209,6 +210,7 @@ try {
     $drasculaAddonZip = $optionalGameZips[$Downloads[12].Archive]
     $lureZip = $optionalGameZips[$Downloads[13].Archive]
     $maniacDeluxeZip = $optionalGameZips[$Downloads[14].Archive]
+    $drasculaMusicZip = $optionalGameZips[$Downloads[15].Archive]
     $extraGamePackages = @()
     foreach ($extraGame in $extraGames) {
         try {
@@ -248,7 +250,31 @@ try {
     $scummvmExe = Join-Path $scummvmDir 'scummvm.exe'
     if (-not (Test-Path -LiteralPath $scummvmExe -PathType Leaf)) { throw 'No se pudo dejar scummvm.exe en la ruta que busca ES-DE.' }
     # ScummVM switches to portable mode when this file sits beside its executable.
-    New-Item -ItemType File -Path (Join-Path $scummvmDir 'scummvm.ini') -Force | Out-Null
+    # Set subtitles globally so games launched outside ES-DE inherit the same default.
+    $scummvmIniPath = Join-Path $scummvmDir 'scummvm.ini'
+    if (-not (Test-Path -LiteralPath $scummvmIniPath)) { New-Item -ItemType File -Path $scummvmIniPath -Force | Out-Null }
+    $scummvmIniLines = New-Object System.Collections.ArrayList
+    $scummvmIniLines.AddRange([string[]](Get-Content -LiteralPath $scummvmIniPath -ErrorAction SilentlyContinue))
+    $globalSectionIndex = -1
+    for ($i = 0; $i -lt $scummvmIniLines.Count; $i++) {
+        if ([string]$scummvmIniLines[$i] -match '^\s*\[scummvm\]\s*$') { $globalSectionIndex = $i; break }
+    }
+    if ($globalSectionIndex -lt 0) {
+        $scummvmIniLines.Insert(0, '[scummvm]')
+        $scummvmIniLines.Insert(1, 'subtitles=true')
+    } else {
+        $globalSectionEnd = $scummvmIniLines.Count
+        for ($i = $globalSectionIndex + 1; $i -lt $scummvmIniLines.Count; $i++) {
+            if ([string]$scummvmIniLines[$i] -match '^\s*\[[^]]+\]\s*$') { $globalSectionEnd = $i; break }
+        }
+        $subtitleLineIndex = -1
+        for ($i = $globalSectionIndex + 1; $i -lt $globalSectionEnd; $i++) {
+            if ([string]$scummvmIniLines[$i] -match '^\s*subtitles\s*=') { $subtitleLineIndex = $i; break }
+        }
+        if ($subtitleLineIndex -ge 0) { $scummvmIniLines[$subtitleLineIndex] = 'subtitles=true' }
+        else { $scummvmIniLines.Insert($globalSectionEnd, 'subtitles=true') }
+    }
+    Set-Content -LiteralPath $scummvmIniPath -Value $scummvmIniLines -Encoding UTF8
     $gameDir = Join-Path $Root 'Games\BreakMachine'
     $null = Expand-OptionalGame $gameZip $gameDir '.ready-freeware-v14' 'Break Machine'
     $pinballDir = Join-Path $Root 'Games\ExtremePinball'
@@ -278,10 +304,12 @@ try {
     $scummvmGamesDir = Join-Path $Root 'Games\ScummVM'
     $drasculaBaseDir = Join-Path $scummvmGamesDir 'Drascula-base'
     $drasculaAddonDir = Join-Path $scummvmGamesDir 'Drascula-language-addon'
+    $drasculaMusicDir = Join-Path $scummvmGamesDir 'Drascula-music-addon-mp3'
     $lureDir = Join-Path $scummvmGamesDir 'Lure-of-the-Temptress'
     $maniacDeluxeDir = Join-Path $scummvmGamesDir 'Maniac-Mansion-Deluxe'
     $drasculaBaseReady = Expand-OptionalGame $drasculaBaseZip $drasculaBaseDir '.ready-freeware-base' 'Dráscula freeware (English base)'
     $drasculaAddonReady = Expand-OptionalGame $drasculaAddonZip $drasculaAddonDir '.ready-language-addon' 'Dráscula language add-on'
+    $drasculaMusicReady = Expand-OptionalGame $drasculaMusicZip $drasculaMusicDir '.ready-music-addon-mp3' 'Dráscula music add-on (MP3)'
     $lureReady = Expand-OptionalGame $lureZip $lureDir '.ready-freeware-spanish' 'Lure of the Temptress freeware (Spanish)'
     $maniacDeluxeReady = Expand-OptionalGame $maniacDeluxeZip $maniacDeluxeDir '.ready-freeware-mmd-20240815' 'Maniac Mansion Deluxe freeware'
     $scummvmRomDir = Join-Path $esdeDir 'ES-DE\ROMs\scummvm'
@@ -298,6 +326,16 @@ try {
                 $managedRootNames += @(Get-ChildItem -LiteralPath $drasculaAddonDir -File -Recurse -Force | ForEach-Object Name)
             }
             else { Write-Log 'Dráscula se instalará en inglés porque no se pudo descargar o extraer el complemento de idiomas.' 'WARN' }
+            if ($drasculaMusicReady) {
+                $drasculaAudioSource = Get-ChildItem -LiteralPath $drasculaMusicDir -Directory -Recurse -Force | Where-Object { $_.Name -eq 'audio' } | Select-Object -First 1
+                if ($drasculaAudioSource) {
+                    $drasculaAudioTarget = Join-Path $drasculaRomDir 'audio'
+                    New-Item -ItemType Directory -Path $drasculaAudioTarget -Force | Out-Null
+                    Get-ChildItem -LiteralPath $drasculaAudioSource.FullName -Force | Copy-Item -Destination $drasculaAudioTarget -Recurse -Force
+                    Write-Log 'Pistas de música MP3 de Dráscula instaladas en la carpeta audio del juego.'
+                } else { Write-Log 'No se encontró la carpeta audio dentro del complemento musical de Dráscula.' 'WARN' }
+            }
+            else { Write-Log 'Dráscula se instalará sin música porque no se pudo descargar el complemento musical.' 'WARN' }
             Set-Content -LiteralPath (Join-Path $drasculaRomDir 'drascula.scummvm') -Value 'drascula' -Encoding ASCII
             Write-Log 'Dráscula preparado para ES-DE con su identificador ScummVM.'
         } else { Write-Log 'Se omite Dráscula: el paquete base no contiene packet.001.' 'WARN' }
@@ -421,7 +459,7 @@ try {
     }
     $scummvmStandaloneCommand = $scummvmSystemOverride.SelectSingleNode('command[@label="ScummVM (Standalone)"]')
     if (-not $scummvmStandaloneCommand) { throw 'No se encontró el comando independiente de ScummVM en ES-DE.' }
-    $scummvmStandaloneCommand.InnerText = '%STARTDIR%=%GAMEDIR% %EMULATOR_SCUMMVM% --path=%GAMEDIR% -f --language=es %BASENAME%'
+    $scummvmStandaloneCommand.InnerText = '%STARTDIR%=%GAMEDIR% %EMULATOR_SCUMMVM% --path=%GAMEDIR% -f --language=es --subtitles %BASENAME%'
     # ES-DE selects the first command as the default. The bundled system lists
     # RetroArch first, but this portable setup ships standalone ScummVM only.
     foreach ($command in @($scummvmSystemOverride.SelectNodes('command'))) {
