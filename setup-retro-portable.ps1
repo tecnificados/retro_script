@@ -893,11 +893,16 @@ try {
                 if ((Get-ImageFormat "$imageCachePath.part") -ne '.png') { throw 'La URL no devolvió una imagen PNG válida.' }
                 Move-Item -LiteralPath "$imageCachePath.part" -Destination $imageCachePath -Force
             }
-            $imageName = $item.GameId + '.png'
-            Copy-Item -LiteralPath $imageCachePath -Destination (Join-Path $scummvmStagingMedia $imageName) -Force
+            $gameFolderName = Split-Path -Parent $item.Descriptor
+            $gameImageName = $item.GameId + '.png'
+            $folderImageName = $gameFolderName + '.png'
+            Copy-Item -LiteralPath $imageCachePath -Destination (Join-Path $scummvmStagingMedia $folderImageName) -Force
+            $gameMediaDirectory = Join-Path $scummvmStagingMedia $gameFolderName
+            New-Item -ItemType Directory -Path $gameMediaDirectory -Force | Out-Null
+            Copy-Item -LiteralPath $imageCachePath -Destination (Join-Path $gameMediaDirectory $gameImageName) -Force
             $imageNode = $entry.SelectSingleNode('image')
             if (-not $imageNode) { $imageNode = $scummvmGamelist.CreateElement('image'); $null = $entry.AppendChild($imageNode) }
-            $imageNode.InnerText = './downloaded_media/scummvm/screenshots/' + $imageName
+            $imageNode.InnerText = './downloaded_media/scummvm/screenshots/' + $gameFolderName + '/' + $gameImageName
         } catch { Write-Log "No se pudo preparar la imagen de $($item.Name): $($_.Exception.Message)" 'WARN' }
     }
     foreach ($item in $scummvmCatalog) {
@@ -916,7 +921,7 @@ try {
             # folderlink is resolved from the folder itself, unlike a game's <path>
             # which is resolved from the system ROM directory.
             folderlink = Split-Path -Leaf $item.Descriptor
-            image = ('./downloaded_media/scummvm/screenshots/' + $item.GameId + '.png')
+            image = ('./downloaded_media/scummvm/screenshots/' + $gameFolderName + '.png')
         }
         foreach ($fieldName in @('path', 'name', 'releasedate', 'desc', 'folderlink', 'image')) {
             $node = $folderEntry.SelectSingleNode($fieldName)
@@ -927,7 +932,12 @@ try {
     $scummvmGamelist.Save($scummvmGamelistPath)
     $scummvmTargetMedia = Join-Path $esdeExe.DirectoryName 'ES-DE\downloaded_media\scummvm\screenshots'
     New-Item -ItemType Directory -Path $scummvmTargetMedia -Force | Out-Null
-    Get-ChildItem -LiteralPath $scummvmStagingMedia -File | Copy-Item -Destination $scummvmTargetMedia -Force
+    Get-ChildItem -LiteralPath $scummvmStagingMedia -File -Recurse | ForEach-Object {
+        $relativeMediaPath = $_.FullName.Substring($scummvmStagingMedia.Length).TrimStart('\', '/')
+        $targetMediaPath = Join-Path $scummvmTargetMedia $relativeMediaPath
+        New-Item -ItemType Directory -Path (Split-Path -Parent $targetMediaPath) -Force | Out-Null
+        Copy-Item -LiteralPath $_.FullName -Destination $targetMediaPath -Force
+    }
     Write-Log "Metadatos preparados en caché temporal y copiados a ES-DE: $metadataStaging"
 
     $shortcut = Join-Path $Root 'run.bat'
