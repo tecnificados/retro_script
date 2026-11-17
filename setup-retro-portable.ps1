@@ -254,7 +254,8 @@ try {
     $scummvmIniPath = Join-Path $scummvmDir 'scummvm.ini'
     if (-not (Test-Path -LiteralPath $scummvmIniPath)) { New-Item -ItemType File -Path $scummvmIniPath -Force | Out-Null }
     $scummvmIniLines = New-Object System.Collections.ArrayList
-    $scummvmIniLines.AddRange([string[]](Get-Content -LiteralPath $scummvmIniPath -ErrorAction SilentlyContinue))
+    $existingScummvmIniLines = Get-Content -LiteralPath $scummvmIniPath -ErrorAction SilentlyContinue
+    if ($null -ne $existingScummvmIniLines) { $scummvmIniLines.AddRange([string[]]$existingScummvmIniLines) }
     $globalSectionIndex = -1
     for ($i = 0; $i -lt $scummvmIniLines.Count; $i++) {
         if ([string]$scummvmIniLines[$i] -match '^\s*\[scummvm\]\s*$') { $globalSectionIndex = $i; break }
