@@ -1,6 +1,6 @@
 # Estado del proyecto
 
-Última revisión: 11 de noviembre de 2026.
+Última revisión: 18 de noviembre de 2026.
 
 ## Objetivo
 
@@ -22,6 +22,7 @@ Preparar desde Windows una colección portable de juegos DOS y aventuras ScummVM
 | Jazz Jackrabbit | Shareware 1.1 | 1994 | [DOS Games Archive](https://image.dosgamesarchive.com/games/jazz.zip) |
 | The Lost Vikings | Demo | 1993 | [DOSGames.com](https://dosgames.com/files/vikings.zip) |
 | Worms Reinforcements | Demo | 1995 | [Internet Archive](https://archive.org/download/worms_202611/WORMS.zip) |
+| Beneath a Steel Sky | Freeware, edición CD 1.2 | 1994; voces en inglés y subtítulos en castellano | [ScummVM](https://downloads.scummvm.org/frs/extras/Beneath%20a%20Steel%20Sky/bass-cd-1.2.zip) |
 | Dráscula: The Vampire Strikes Back | Freeware; base inglesa, complemento de idiomas con español y música en MP3 | 1996 | [ScummVM: juego base](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-1.0.zip), [complemento multilingüe](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-int-1.0.zip) y [complemento musical MP3](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-audio-mp3-2.0.zip) |
 | Lure of the Temptress | Freeware, edición española | 1992 | [ScummVM](https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-es-1.1.zip) |
 | Maniac Mansion Deluxe | Freeware, remake fan-made compatible con ScummVM mediante AGS; se fuerza la traducción española incluida | 2004 | [Internet Archive](https://archive.org/download/mmd_20240815/MMD.zip) |

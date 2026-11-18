@@ -2,7 +2,7 @@
 
 ## Entrada
 
-- `setup-retro-portable.bat` invoca `setup-retro-portable.ps1` con `-NoProfile` y `ExecutionPolicy Bypass`, captura el código de salida y deja abierta la consola al final.
+- `setup.bat` invoca `setup-retro-portable.ps1` con `-NoProfile` y `ExecutionPolicy Bypass`, captura el código de salida y deja abierta la consola al final.
 - El script obtiene la raíz desde `$PSScriptRoot`, por lo que sus rutas de trabajo se resuelven respecto a la ubicación del repositorio.
 - `extra_games.csv` usa UTF-8 y el delimitador `;`. Las columnas requeridas son `Title`, `DownloadUrl` y `Executable`; `Year` es opcional.
 
@@ -24,6 +24,8 @@ ES-DE, DOSBox y ScummVM son requisitos del setup. Cada descarga de juego se inte
 Una URL puede resolver en el equipo del usuario y fallar en otro entorno por DNS o conectividad. No cambiar una URL solo porque una ejecución aislada no pueda resolver su dominio; verificar el error y conservar la fuente solicitada.
 
 ## Instalación y lanzamiento
+
+Beneath a Steel Sky se instala desde el ZIP oficial de la edición CD 1.2. El setup verifica que `sky.dsk`, `sky.dnr` y `sky.cpt` estén juntos antes de crear `sky.scummvm`. El comando habitual de ES-DE selecciona los subtítulos en castellano y la edición conserva las voces en inglés.
 
 El script extrae ES-DE, DOSBox y ScummVM bajo la carpeta del repositorio. Extrae cada juego en `Games` y, para las filas del CSV, resuelve el ejecutable declarado en `Executable`; después escribe lanzadores `.bat` bajo `ES-DE\...\ROMs\windows`. Los lanzadores construyen rutas relativas desde ES-DE y llevan un log propio. Los lanzadores DOSBox incluidos usan `--fullscreen`. Extreme Pinball también usa un archivo de configuración específico de DOSBox Staging con `aspect = stretch`, `viewport = fit` e `integer_scaling = off` para llenar la pantalla panorámica, a costa de alterar las proporciones de la imagen.
 

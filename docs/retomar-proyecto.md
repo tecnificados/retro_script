@@ -12,7 +12,7 @@ Lee primero `README.md`, `docs/estado-del-proyecto.md` y `docs/flujo-setup.md`. 
 - `metadata_sources.csv` contiene el nombre exacto del `.bat`, la página de metadatos y una URL directa de imagen opcional. El setup descarga las imágenes antes de copiarlas, conserva los originales en `.setup-cache\metadata-images`, convierte GIF a PNG y monta los resultados en `.setup-cache\metadata-staging` antes de copiarlos a ES-DE. Si una fuente no responde, el setup continúa con título/año locales.
 - El usuario confirmó que la descarga y visualización de las imágenes ya funciona. Si vuelve a fallar, revisar `setup.log` y el contenido de `.setup-cache\metadata-images` y `.setup-cache\metadata-staging`.
 - Tet42 está en el CSV con la URL de Archive.org, la secuencia `SETUP.EXE,TET.EXE` y año 1989. La copia de trabajo actual contiene el ZIP, ambos ejecutables y el lanzador generado con los dos comandos en ese orden; falta confirmar el juego en ejecución.
-- Beneath a Steel Sky fue retirado por petición del usuario. No reintroducirlo ni añadir montaje de imágenes de CD para ese caso.
+- Beneath a Steel Sky está en el catálogo fijo de ScummVM con el ZIP freeware oficial `bass-cd-1.2.zip`. El setup usa sus archivos de datos directamente y ES-DE lo inicia con subtítulos en castellano y voces en inglés.
 - Extreme Pinball usa `Games\ExtremePinball\dosbox-video.conf` para estirar la imagen a la pantalla; esto puede deformar las proporciones.
 - Break Machine usa el ZIP de Internet Archive y la caché `break-machine-freeware-v14-archive-org.zip`.
 - `clean.bat` conserva scripts, documentación, licencia y CSV; borra la instalación y caché tras pedir confirmación.

@@ -30,7 +30,8 @@ $Downloads = @(
     [pscustomobject]@{ Name='Dráscula language add-on (Spanish, German, French and Italian)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-int-1.0.zip'; Archive='drascula-language-addon.zip' },
     [pscustomobject]@{ Name='Lure of the Temptress freeware (Spanish)'; Url='https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-es-1.1.zip'; Archive='lure-of-the-temptress-freeware-spanish.zip' },
     [pscustomobject]@{ Name='Maniac Mansion Deluxe freeware'; Url='https://archive.org/download/mmd_20240815/MMD.zip'; Archive='maniac-mansion-deluxe-freeware-mmd-20240815.zip' },
-    [pscustomobject]@{ Name='Dráscula freeware music add-on (MP3)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-audio-mp3-2.0.zip'; Archive='drascula-freeware-music-addon-mp3.zip' }
+    [pscustomobject]@{ Name='Dráscula freeware music add-on (MP3)'; Url='https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-audio-mp3-2.0.zip'; Archive='drascula-freeware-music-addon-mp3.zip' },
+    [pscustomobject]@{ Name='Beneath a Steel Sky freeware (CD 1.2)'; Url='https://downloads.scummvm.org/frs/extras/Beneath%20a%20Steel%20Sky/bass-cd-1.2.zip'; Archive='beneath-a-steel-sky-freeware-cd-1.2.zip' }
 )
 
 function Write-Log([string]$Message, [string]$Level='INFO') {
@@ -211,6 +212,7 @@ try {
     $lureZip = $optionalGameZips[$Downloads[13].Archive]
     $maniacDeluxeZip = $optionalGameZips[$Downloads[14].Archive]
     $drasculaMusicZip = $optionalGameZips[$Downloads[15].Archive]
+    $beneathZip = $optionalGameZips['beneath-a-steel-sky-freeware-cd-1.2.zip']
     $extraGamePackages = @()
     foreach ($extraGame in $extraGames) {
         try {
@@ -308,6 +310,7 @@ try {
     $drasculaMusicDir = Join-Path $scummvmGamesDir 'Drascula-music-addon-mp3'
     $lureDir = Join-Path $scummvmGamesDir 'Lure-of-the-Temptress'
     $maniacDeluxeDir = Join-Path $scummvmGamesDir 'Maniac-Mansion-Deluxe'
+    $beneathDir = Join-Path $scummvmGamesDir 'Beneath-a-Steel-Sky'
     $drasculaBaseReady = Expand-OptionalGame $drasculaBaseZip $drasculaBaseDir '.ready-freeware-base' 'Dráscula freeware (English base)'
     $drasculaAddonReady = Expand-OptionalGame $drasculaAddonZip $drasculaAddonDir '.ready-language-addon' 'Dráscula language add-on'
     $drasculaMusicReady = Expand-OptionalGame $drasculaMusicZip $drasculaMusicDir '.ready-music-addon-mp3' 'Dráscula music add-on (MP3)'
@@ -359,6 +362,19 @@ try {
         } else {
             $managedRootNames += @(Get-ChildItem -LiteralPath (Join-Path $maniacDeluxeDir 'MMD') -File -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object Name)
             Write-Log 'Maniac Mansion Deluxe: el archivo no contiene Maniac.exe; se omite el juego.' 'WARN'
+        }
+    }
+    if (Expand-OptionalGame $beneathZip $beneathDir '.ready-freeware-cd-1.2' 'Beneath a Steel Sky freeware (CD 1.2)') {
+        $skyDataFile = Find-GameFile $beneathDir @('sky.dsk')
+        if ($skyDataFile -and
+            (Test-Path -LiteralPath (Join-Path $skyDataFile.DirectoryName 'sky.dnr') -PathType Leaf) -and
+            (Test-Path -LiteralPath (Join-Path $skyDataFile.DirectoryName 'sky.cpt') -PathType Leaf)) {
+            $beneathRomDir = Ensure-ManagedGameDirectory $scummvmRomDir 'Beneath a Steel Sky'
+            Copy-GameFilesFlat $skyDataFile.DirectoryName $beneathRomDir
+            Set-Content -LiteralPath (Join-Path $beneathRomDir 'sky.scummvm') -Value 'sky' -Encoding ASCII
+            Write-Log 'Beneath a Steel Sky CD preparado para ES-DE con subtítulos en español.'
+        } else {
+            Write-Log 'Beneath a Steel Sky: faltan sky.dsk, sky.dnr o sky.cpt; se omite el juego.' 'WARN'
         }
     }
     $managedRootNames = @($managedRootNames | Select-Object -Unique)
@@ -896,6 +912,7 @@ try {
     # Keep each ScummVM game in its own directory to prevent its data files from
     # mixing with other games. ES-DE scans each directory for its .scummvm file.
     $scummvmCatalog = @(
+        [pscustomobject]@{ Descriptor='Beneath a Steel Sky/sky.scummvm'; GameId='sky'; Name='Beneath a Steel Sky (1994) (Freeware)'; Date='19940101T000000'; Description='Aventura gráfica de ciencia ficción de Revolution Software. Edición CD freeware con voces en inglés y subtítulos en castellano.' },
         [pscustomobject]@{ Descriptor='Drascula/drascula.scummvm'; GameId='drascula'; Name='Dráscula: The Vampire Strikes Back (1996) (Freeware)'; Date='19960101T000000'; Description='Aventura gráfica freeware de Alcachofa Soft. Incluye el juego base y el complemento de idiomas español, alemán, francés e italiano.' },
         [pscustomobject]@{ Descriptor='Lure of the Temptress/lure.scummvm'; GameId='lure'; Name='Lure of the Temptress (1992) (Freeware)'; Date='19920101T000000'; Description='Aventura gráfica freeware de Revolution Software. Esta edición incluye los textos en español.' },
         [pscustomobject]@{ Descriptor='Maniac Mansion Deluxe/maniacmansiondeluxe.scummvm'; GameId='maniacmansiondeluxe'; Name='Maniac Mansion Deluxe (2004) (Freeware) (Español)'; Date='20040521T000000'; Description='Remake freeware hecho por fans de Maniac Mansion. Incluye traducción al español y se ejecuta con el motor AGS de ScummVM.' }

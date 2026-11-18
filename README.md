@@ -5,11 +5,11 @@ Este repositorio prepara una instalación portable de **ES-DE**, **DOSBox Stagin
 ## Inicio rápido
 
 1. Descarga o clona este repositorio en una carpeta local de Windows.
-2. Ejecuta `setup-retro-portable.bat`. El setup puede tardar mientras descarga ES-DE, DOSBox y los juegos configurados.
+2. Ejecuta `setup.bat`. El setup puede tardar mientras descarga ES-DE, DOSBox y los juegos configurados.
 3. Cuando termine sin errores, ejecuta `run.bat` para abrir ES-DE.
 4. En ES-DE, selecciona un juego y pulsa Intro. Los lanzadores incluidos ejecutan DOSBox a pantalla completa. Extreme Pinball estira la imagen para ocupar también los lados de una pantalla panorámica; esto puede deformar un poco sus proporciones.
 
-Para volver a configurar, vuelve a ejecutar `setup-retro-portable.bat`. Los ZIP válidos de `.setup-cache` se reutilizan. Para borrar la caché y la instalación descargada o extraída y empezar de cero, ejecuta `clean.bat`; conserva los scripts, la documentación, `extra_games.csv` y `metadata_sources.csv`.
+Para volver a configurar, vuelve a ejecutar `setup.bat`. Los ZIP válidos de `.setup-cache` se reutilizan. Para borrar la caché y la instalación descargada o extraída y empezar de cero, ejecuta `clean.bat`; conserva los scripts, la documentación, `extra_games.csv` y `metadata_sources.csv`.
 
 ## Juegos incluidos inicialmente
 
@@ -33,6 +33,7 @@ El setup descarga [ScummVM](https://www.scummvm.org/en/downloads/) en versión p
 
 | Juego | Tipo | Año | Portal y paquete |
 | --- | --- | --- | --- |
+| Beneath a Steel Sky | Freeware, edición CD 1.2 con voces en inglés y subtítulos en castellano | 1994 | [ScummVM](https://downloads.scummvm.org/frs/extras/Beneath%20a%20Steel%20Sky/bass-cd-1.2.zip) |
 | Dráscula: The Vampire Strikes Back | Freeware; base en inglés, complemento de idiomas que incluye español y música en MP3 | 1996 | [ScummVM, base](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-1.0.zip), [complemento de idiomas](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-int-1.0.zip) y [complemento musical MP3](https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-audio-mp3-2.0.zip) |
 | Lure of the Temptress | Freeware, edición española | 1992 | [ScummVM](https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-es-1.1.zip) |
 | Maniac Mansion Deluxe | Freeware, remake hecho por fans; incluye traducción al español y los datos para ScummVM/AGS | 2004 | [Internet Archive](https://archive.org/download/mmd_20240815/MMD.zip) |
@@ -59,7 +60,7 @@ El setup procesa todas las filas con la misma lógica: descarga el ZIP en `.setu
 
 El setup también prepara metadatos iniciales desde las páginas indicadas en [`metadata_sources.csv`](metadata_sources.csv). Descarga previamente las imágenes directas a `.setup-cache\metadata-images`, deja el `gamelist.xml` y las imágenes ya preparadas en `.setup-cache\metadata-staging` y después los copia a la instalación portable de ES-DE. Para una fila extra, añade el nombre exacto del `.bat` generado, la página del juego y, opcionalmente, una URL directa de imagen. Se usa esa imagen directa si se indicó; en caso contrario se busca la imagen Open Graph de la página. Los GIF se convierten a PNG y se reutilizan desde caché al reintentar. Título y año siguen procediendo del catálogo local. Si una fuente falla, el setup continúa con los datos locales y lo anota en `setup.log`.
 
-Después de editar el CSV, ejecuta `setup-retro-portable.bat` otra vez.
+Después de editar el CSV, ejecuta `setup.bat` otra vez.
 
 ## Registro y solución de problemas
 
