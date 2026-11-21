@@ -34,6 +34,10 @@ $Downloads = @(
     [pscustomobject]@{ Name='Beneath a Steel Sky freeware (CD 1.2)'; Url='https://downloads.scummvm.org/frs/extras/Beneath%20a%20Steel%20Sky/bass-cd-1.2.zip'; Archive='beneath-a-steel-sky-freeware-cd-1.2.zip' }
 )
 
+<#
+.SYNOPSIS
+Escribe un mensaje con fecha y nivel en la consola y en setup.log.
+#>
 function Write-Log([string]$Message, [string]$Level='INFO') {
     $line = "{0} [{1}] {2}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Level, $Message
     $utf8 = New-Object System.Text.UTF8Encoding($true)
@@ -42,6 +46,13 @@ function Write-Log([string]$Message, [string]$Level='INFO') {
     Write-Host $line
 }
 
+<#
+.SYNOPSIS
+Devuelve la ruta de un ZIP válido en la caché del setup.
+.DESCRIPTION
+Reutiliza el ZIP existente o recupera una descarga .part completa. Si hace falta
+descargarlo, comprueba el ZIP temporal antes de moverlo a su nombre definitivo.
+#>
 function Get-Archive([string]$Name, [string]$Url, [string]$File) {
     $path = Join-Path $Cache $File
     $part = "$path.part"
@@ -70,6 +81,13 @@ function Get-Archive([string]$Name, [string]$Url, [string]$File) {
     return $path
 }
 
+<#
+.SYNOPSIS
+Obtiene el ZIP de un juego opcional a partir de sus campos Name, Url y Archive.
+.DESCRIPTION
+Devuelve la ruta del ZIP. Si falla la descarga, registra un aviso y devuelve $null
+para que el setup pueda continuar con los demás juegos.
+#>
 function Get-OptionalGameArchive($Download) {
     try { return (Get-Archive $Download.Name $Download.Url $Download.Archive) }
     catch {
@@ -78,6 +96,13 @@ function Get-OptionalGameArchive($Download) {
     }
 }
 
+<#
+.SYNOPSIS
+Prepara el directorio de un juego opcional mediante Expand-Once.
+.DESCRIPTION
+Devuelve $true si el directorio está listo. Devuelve $false si falta el ZIP o
+falla la extracción. En este último caso también registra un aviso.
+#>
 function Expand-OptionalGame([string]$Archive, [string]$Destination, [string]$Marker, [string]$GameName) {
     if (-not $Archive) { return $false }
     try { Expand-Once $Archive $Destination $Marker; return $true }
@@ -87,6 +112,13 @@ function Expand-OptionalGame([string]$Archive, [string]$Destination, [string]$Ma
     }
 }
 
+<#
+.SYNOPSIS
+Busca un archivo del juego en su directorio y subdirectorios.
+.DESCRIPTION
+Prueba los nombres en el orden recibido y devuelve la primera coincidencia,
+o $null si el directorio o los archivos no existen.
+#>
 function Find-GameFile([string]$Directory, [string[]]$Names) {
     if (-not (Test-Path -LiteralPath $Directory -PathType Container)) { return $null }
     foreach ($name in $Names) {
@@ -96,12 +128,25 @@ function Find-GameFile([string]$Directory, [string[]]$Names) {
     return $null
 }
 
+<#
+.SYNOPSIS
+Copia todos los archivos de un árbol a un único directorio.
+.DESCRIPTION
+Omite los marcadores .ready y copia cada archivo por su nombre base. Si ya existe
+un archivo con ese nombre en el destino, lo sobrescribe.
+#>
 function Copy-GameFilesFlat([string]$Source, [string]$Destination) {
     New-Item -ItemType Directory -Path $Destination -Force | Out-Null
     $files = @(Get-ChildItem -LiteralPath $Source -File -Recurse -Force | Where-Object { $_.Name -notlike '.ready*' })
     foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $Destination $file.Name) -Force }
 }
 
+<#
+.SYNOPSIS
+Crea y devuelve la ruta absoluta del directorio de un juego de ScummVM.
+.DESCRIPTION
+Normaliza la ruta y comprueba que esté dentro del directorio padre antes de crearla.
+#>
 function Ensure-ManagedGameDirectory([string]$Parent, [string]$Name) {
     $parentPath = [System.IO.Path]::GetFullPath($Parent).TrimEnd('\') + '\'
     $gamePath = [System.IO.Path]::GetFullPath((Join-Path $Parent $Name))
@@ -112,6 +157,13 @@ function Ensure-ManagedGameDirectory([string]$Parent, [string]$Name) {
     return $gamePath
 }
 
+<#
+.SYNOPSIS
+Extrae un ZIP si el destino todavía no contiene el archivo marcador.
+.DESCRIPTION
+Extrae en un directorio provisional .incomplete. Cuando termina, sustituye el
+destino por ese directorio y crea el marcador para las próximas ejecuciones.
+#>
 function Expand-Once([string]$Archive, [string]$Destination, [string]$Marker='.ready') {
     if (Test-Path -LiteralPath (Join-Path $Destination $Marker)) { return }
     $staging = "$Destination.incomplete"
@@ -123,33 +175,75 @@ function Expand-Once([string]$Archive, [string]$Destination, [string]$Marker='.r
     New-Item -ItemType File -Path (Join-Path $Destination $Marker) -Force | Out-Null
 }
 
+<#
+.SYNOPSIS
+Calcula la ruta de un archivo respecto a un directorio base.
+.DESCRIPTION
+Devuelve la ruta con separadores de Windows y conserva los espacios para que
+los lanzadores puedan construir sus rutas relativas.
+#>
 function Get-RelativePath([string]$BaseDirectory, [string]$TargetPath) {
     $baseUri = New-Object System.Uri(($BaseDirectory.TrimEnd('\') + '\'))
     $targetUri = New-Object System.Uri($TargetPath)
     return [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($targetUri).ToString()).Replace('/', '\')
 }
 
+<#
+.SYNOPSIS
+Convierte un título en un identificador para el ZIP y la carpeta de un juego extra.
+.DESCRIPTION
+Usa letras ASCII minúsculas, cifras y guiones. Si no queda ningún carácter
+alfanumérico, genera un error.
+#>
 function ConvertTo-SafeSlug([string]$Value) {
     $slug = ($Value.ToLowerInvariant() -replace '[^a-z0-9]+', '-').Trim('-')
     if (-not $slug) { throw "No se pudo crear un identificador para el juego: $Value" }
     return $slug
 }
 
+<#
+.SYNOPSIS
+Lee el contenido de la primera etiqueta meta cuyo nombre o propiedad coincide.
+.DESCRIPTION
+Busca las etiquetas en el orden del HTML, decodifica las entidades del atributo
+content y devuelve $null si no encuentra una coincidencia con ese atributo.
+#>
 function Get-HtmlMetaValue([string]$Html, [string[]]$Names) {
     foreach ($tag in [regex]::Matches($Html, '(?is)<meta\b[^>]*>')) {
         $tagText = $tag.Value
         $nameMatch = [regex]::Match($tagText, '(?is)(?:name|property)\s*=\s*["'']([^"'']+)["'']')
         if (-not $nameMatch.Success -or $Names -notcontains $nameMatch.Groups[1].Value.ToLowerInvariant()) { continue }
-        $contentMatch = [regex]::Match($tagText, '(?is)content\s*=\s*["''](.*?)["'']')
-        if ($contentMatch.Success) { return [System.Net.WebUtility]::HtmlDecode($contentMatch.Groups[1].Value).Trim() }
+        $contentMatch = [regex]::Match($tagText, '(?is)\bcontent\s*=\s*(["''])(.*?)\1')
+        if ($contentMatch.Success) { return [System.Net.WebUtility]::HtmlDecode($contentMatch.Groups[2].Value).Trim() }
     }
     return $null
 }
 
+<#
+.SYNOPSIS
+Descarga la ficha de un juego DOS y devuelve su descripción y la URL de su imagen.
+.DESCRIPTION
+Lee las etiquetas meta y recurre a la reseña estructurada si el texto breve
+falta o termina en puntos suspensivos. Quita el HTML de la reseña y convierte
+las rutas relativas de imagen en URL absolutas.
+#>
 function Get-GamePageData([string]$Url) {
-    $response = Invoke-WebRequest -Uri $Url -MaximumRedirection 10 -UseBasicParsing
+    $response = Invoke-WebRequest -Uri $Url -MaximumRedirection 10 -TimeoutSec 30 -UseBasicParsing
     $html = [string]$response.Content
     $description = Get-HtmlMetaValue $html @('og:description', 'description', 'twitter:description')
+    if (-not $description -or $description -match '(?:\.{3}|…)$') {
+        $review = [regex]::Match($html, '"reviewBody"\s*:\s*("(?:\\.|[^"\\])*")')
+        if ($review.Success) {
+            try {
+                $reviewData = ConvertFrom-Json ('{"text":' + $review.Groups[1].Value + '}')
+                if ($reviewData.text) {
+                    $reviewText = $reviewData.text -replace '(?i)<(?:br|/p)\b[^>]*>', ' ' -replace '</?[a-zA-Z][^>]*>', ''
+                    $description = [System.Net.WebUtility]::HtmlDecode($reviewText)
+                }
+            }
+            catch { Write-Log "No se pudo leer la reseña de $Url; se usará la descripción breve." 'WARN' }
+        }
+    }
     $image = Get-HtmlMetaValue $html @('og:image', 'twitter:image')
     if ($image) {
         $image = ([System.Uri]::new([System.Uri]$Url, $image)).AbsoluteUri
@@ -157,6 +251,47 @@ function Get-GamePageData([string]$Url) {
     return [pscustomobject]@{ Description=$description; ImageUrl=$image }
 }
 
+<#
+.SYNOPSIS
+Traduce al castellano un extracto de una descripción en inglés con MyMemory.
+.DESCRIPTION
+Limita el texto a 500 bytes UTF-8 por petición. Intenta conservar frases
+completas y, si la primera supera el límite, corta entre palabras.
+Genera un error si el servicio no devuelve una traducción válida.
+#>
+function ConvertTo-SpanishDescription([string]$Description) {
+    $source = ($Description -replace '\s+', ' ').Trim()
+    $excerpt = ''
+    foreach ($sentence in ($source -split '(?<=[.!?])\s+')) {
+        $candidate = "$excerpt $sentence".Trim()
+        if ([System.Text.Encoding]::UTF8.GetByteCount($candidate) -gt 500) { break }
+        $excerpt = $candidate
+    }
+    if (-not $excerpt) {
+        foreach ($word in ($source -split ' ')) {
+            $candidate = "$excerpt $word".Trim()
+            if ([System.Text.Encoding]::UTF8.GetByteCount("$candidate…") -gt 500) { break }
+            $excerpt = $candidate
+        }
+        if (-not $excerpt) { throw 'La descripción no contiene un fragmento que se pueda traducir.' }
+        $excerpt += '…'
+    }
+    $query = [System.Uri]::EscapeDataString($excerpt)
+    $result = Invoke-RestMethod -Uri "https://api.mymemory.translated.net/get?langpair=en%7Ces-ES&q=$query" -TimeoutSec 20
+    $translation = [System.Net.WebUtility]::HtmlDecode([string]$result.responseData.translatedText).Trim()
+    if ($result.responseStatus -ne 200 -or -not $translation -or $translation -ceq $excerpt) {
+        throw "MyMemory no devolvió una traducción válida (estado $($result.responseStatus))."
+    }
+    return $translation
+}
+
+<#
+.SYNOPSIS
+Identifica JPEG, PNG, WebP o GIF leyendo la cabecera del archivo.
+.DESCRIPTION
+Devuelve la extensión correspondiente o $null si la cabecera no coincide
+con un formato reconocido. La extensión original del archivo no interviene.
+#>
 function Get-ImageFormat([string]$Path) {
     $bytes = [System.IO.File]::ReadAllBytes($Path)
     if ($bytes.Length -ge 3 -and $bytes[0] -eq 0xFF -and $bytes[1] -eq 0xD8 -and $bytes[2] -eq 0xFF) { return '.jpg' }
@@ -851,9 +986,14 @@ try {
                 Write-Log "Obteniendo metadatos e imagen para $($item.Name) desde $($metadataSource.SourceUrl)"
                 $pageData = Get-GamePageData $metadataSource.SourceUrl
                 if (-not [string]::IsNullOrWhiteSpace($pageData.Description)) {
-                    $descriptionNode = $entry.SelectSingleNode('desc')
-                    if (-not $descriptionNode) { $descriptionNode = $gamelist.CreateElement('desc'); $null = $entry.AppendChild($descriptionNode) }
-                    $descriptionNode.InnerText = $pageData.Description
+                    try {
+                        $translation = ConvertTo-SpanishDescription $pageData.Description
+                        $descriptionNode = $entry.SelectSingleNode('desc')
+                        if (-not $descriptionNode) { $descriptionNode = $gamelist.CreateElement('desc'); $null = $entry.AppendChild($descriptionNode) }
+                        $descriptionNode.InnerText = $translation
+                        Write-Log "Descripción traducida al español: $($item.Name)"
+                    }
+                    catch { Write-Log "No se pudo traducir la descripción de $($item.Name): $($_.Exception.Message)" 'WARN' }
                 }
                 $imageUrl = if (-not [string]::IsNullOrWhiteSpace($metadataSource.ImageUrl)) { $metadataSource.ImageUrl.Trim() } else { $pageData.ImageUrl }
                 if ([string]::IsNullOrWhiteSpace($pageData.Description) -and [string]::IsNullOrWhiteSpace($imageUrl)) {
