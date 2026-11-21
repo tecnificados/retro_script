@@ -87,6 +87,23 @@ ES-DE se navega con teclado o mando; la versión usada no ofrece navegación nat
 
 El setup descarga componentes y juegos de terceros desde los portales enlazados en el catálogo. Las etiquetas freeware, demo y shareware identifican el tipo de paquete que se seleccionó; no sustituyen la licencia de cada titular. Si algún titular o representante se pone en contacto conmigo para señalar una irregularidad, retiraré cuanto antes el material afectado del proyecto y de sus descargas. Consulta `LICENSE` para la licencia del contenido propio del repositorio y verifica los términos de cada descarga antes de redistribuirla.
 
+## Monitor diario de URL
+
+El flujo **Verificar URL de Retro Script** se programa a las 06:17 UTC cada día (07:17 en invierno y 08:17 en verano en la España peninsular). En GitHub también puedes lanzarlo desde **Actions → Verificar URL de Retro Script → Run workflow** cuando el flujo esté en la rama predeterminada. El repositorio debe tener Actions e Issues habilitados y permitir escritura en incidencias al token del flujo.
+
+El subproyecto Java descubre los archivos PowerShell del repositorio con Git y extrae las URL HTTP(S) entre comillas. Resuelve las variables de versión de las cadenas con comillas dobles y sigue los catálogos CSV referenciados mediante `Join-Path $Root` o `Join-Path $PSScriptRoot`. Así incorpora las descargas, fichas e imágenes que utiliza el instalador. Para MyMemory sustituye el texto variable por una frase de prueba y valida la traducción recibida. Si una ficha de Windows carece de imagen configurada, comprueba la imagen indicada en sus metadatos HTML. Para ZIP e imágenes lee los primeros 12 bytes, lo que permite detectar páginas de error sin descargar paquetes enteros.
+
+Cada comprobación fallida se reintenta una vez. Si persiste algún fallo, el flujo queda en rojo y crea una incidencia con el recurso, la URL, el error y el enlace a la ejecución. Los fallos posteriores actualizan la misma incidencia abierta. Una ejecución satisfactoria la cierra automáticamente.
+
+Desde la raíz del repositorio, con Git, JDK 21 o superior y Maven, puedes inspeccionar el inventario y ejecutar las comprobaciones:
+
+```sh
+mvn -f tools/url-check/pom.xml compile exec:java "-Dexec.args=--list"
+mvn -f tools/url-check/pom.xml compile exec:java "-Dexec.args=--report informe.md"
+```
+
+El inventario indica el archivo y la línea de cada enlace de PowerShell, o la fila identificada por el juego en los CSV. Una variable de URL sin resolver produce un error de extracción.
+
 ## Autoría
 
 Juan Carlos Ballesteros Hermida — Tecnificados — [www.tecnificados.com](https://www.tecnificados.com)

@@ -6,3 +6,7 @@ run-retro-portable.bat
 Emulators/
 ES-DE/
 Games/
+tools/url-check/.settings/
+tools/url-check/.classpath
+tools/url-check/.project
+informe.md

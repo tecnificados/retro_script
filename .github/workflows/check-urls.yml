@@ -1,0 +1,65 @@
+name: Verificar URL de Retro Script
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: retro-script-url-monitor
+  cancel-in-progress: false
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: tools/url-check/pom.xml
+
+      - name: Comprobar descargas y servicios
+        id: check
+        shell: bash
+        run: mvn -B -f tools/url-check/pom.xml compile exec:java "-Dexec.args=--report $RUNNER_TEMP/url-report.md"
+
+      - name: Actualizar la incidencia del monitor
+        if: ${{ !cancelled() && (steps.check.outcome == 'success' || steps.check.outcome == 'failure') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          OUTCOME: ${{ steps.check.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          title="Fallo en la verificación de URL de Retro Script"
+          report="$RUNNER_TEMP/url-report.md"
+          if [[ ! -s "$report" ]]; then
+            echo "La comprobación terminó sin generar un informe. Consulta el registro de la ejecución." > "$report"
+          fi
+          printf '\n[Ejecución de GitHub Actions](%s/%s/actions/runs/%s)\n' "$GITHUB_SERVER_URL" "$GH_REPO" "$GITHUB_RUN_ID" >> "$report"
+          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          issue=$(gh api --paginate "repos/$GH_REPO/issues?state=open&creator=github-actions%5Bbot%5D&per_page=100" \
+            --jq '.[] | select(.body // "" | startswith("<!-- retro-script-url-monitor -->")) | .number' | sed -n '1p')
+          if [[ "$OUTCOME" == failure ]]; then
+            body="$RUNNER_TEMP/url-issue.md"
+            { echo '<!-- retro-script-url-monitor -->'; cat "$report"; } > "$body"
+            if [[ -n "$issue" ]]; then
+              gh issue edit "$issue" --body-file "$body"
+            else
+              gh issue create --title "$title" --body-file "$body"
+            fi
+          elif [[ -n "$issue" ]]; then
+            gh issue close "$issue" --comment "$(cat "$report")"
+          fi
