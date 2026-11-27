@@ -46,20 +46,20 @@ jobs:
           title="Fallo en la verificación de URL de Retro Script"
           report="$RUNNER_TEMP/url-report.md"
           if [[ ! -s "$report" ]]; then
-            echo "La comprobación terminó sin generar un informe. Consulta el registro de la ejecución." > "$report"
+            printf 'La comprobación terminó sin generar un informe. Consulta el registro de la ejecución.\n\n**KO**\n' > "$report"
           fi
-          printf '\n[Ejecución de GitHub Actions](%s/%s/actions/runs/%s)\n' "$GITHUB_SERVER_URL" "$GH_REPO" "$GITHUB_RUN_ID" >> "$report"
-          cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          run_link="[Ejecución de GitHub Actions]($GITHUB_SERVER_URL/$GH_REPO/actions/runs/$GITHUB_RUN_ID)"
+          { printf '%s\n\n' "$run_link"; cat "$report"; } >> "$GITHUB_STEP_SUMMARY"
           issue=$(gh api --paginate "repos/$GH_REPO/issues?state=open&creator=github-actions%5Bbot%5D&per_page=100" \
             --jq '.[] | select(.body // "" | startswith("<!-- retro-script-url-monitor -->")) | .number' | sed -n '1p')
           if [[ "$OUTCOME" == failure ]]; then
             body="$RUNNER_TEMP/url-issue.md"
-            { echo '<!-- retro-script-url-monitor -->'; cat "$report"; } > "$body"
+            { printf '<!-- retro-script-url-monitor -->\n%s\n\n' "$run_link"; cat "$report"; } > "$body"
             if [[ -n "$issue" ]]; then
               gh issue edit "$issue" --body-file "$body"
             else
               gh issue create --title "$title" --body-file "$body"
             fi
           elif [[ -n "$issue" ]]; then
-            gh issue close "$issue" --comment "$(cat "$report")"
+            gh issue close "$issue" --comment "$(printf '%s\n\n' "$run_link"; cat "$report")"
           fi

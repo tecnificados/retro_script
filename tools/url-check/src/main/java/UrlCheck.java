@@ -34,6 +34,7 @@ public final class UrlCheck {
             return;
         }
         var failures = new ArrayList<String>();
+        var results = new ArrayList<String>();
         for (int index = 0; index < queue.size(); index++) {
             var check = queue.get(index);
             for (int attempt = 1; attempt <= 2; attempt++) {
@@ -41,6 +42,7 @@ public final class UrlCheck {
                     URI image = probe(check);
                     if (image != null) queue.add(new Inventory.Check(Inventory.Kind.IMAGE, image, check.source(), false));
                     System.out.println("OK " + describe(check));
+                    results.add("- " + describe(check) + " — **OK**");
                     break;
                 } catch (Exception error) {
                     if (attempt == 1) {
@@ -48,15 +50,19 @@ public final class UrlCheck {
                     } else {
                         String failure = describe(check) + " — " + error;
                         failures.add("- " + failure);
+                        results.add("- " + failure.replaceAll("\\R", " ") + " — **KO**");
                         System.err.println(failure);
                     }
                 }
             }
         }
         String summary = "Comprobaciones correctas: " + (queue.size() - failures.size())
-                + ". Fallidas: " + failures.size() + ".\n\n" + String.join("\n", failures) + "\n";
-        System.out.print(summary);
-        if (report != null) Files.writeString(report, summary);
+                + ". Fallidas: " + failures.size() + ".\n\n";
+        System.out.print(summary + String.join("\n", failures) + "\n");
+        if (report != null) {
+            String outcome = failures.isEmpty() ? "OK" : "KO";
+            Files.writeString(report, summary + String.join("\n", results) + "\n\n**" + outcome + "**\n");
+        }
         if (!failures.isEmpty()) throw new IOException("Fallos en " + failures.size() + " comprobaciones.");
     }
 
